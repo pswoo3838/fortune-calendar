@@ -1,7 +1,7 @@
 import { defineConfig } from "@apps-in-toss/web-framework/config";
 
 export default defineConfig({
-  appName: "fortune-calendar",
+  appName: "fortunecalendar",
   brand: {
     displayName: "운세 캘린더", // 화면에 노출될 앱의 한글 이름으로 바꿔주세요.
     primaryColor: "#6B4EFF", // 화면에 노출될 앱의 기본 색상으로 바꿔주세요.
