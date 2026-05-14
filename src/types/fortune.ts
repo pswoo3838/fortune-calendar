@@ -101,21 +101,40 @@ export interface CalendarDayData {
   events: CalendarEvent[]; // 사용자 일정
   lunarLabel?: string; // "음 4.18" 형식
   isSonEomneun?: boolean; // 손없는 날 여부
+  holidayName?: string;   // 공휴일 이름 (없으면 undefined)
+}
+
+// 일정 카테고리
+export type EventCategory = "personal" | "work" | "family" | "anniversary" | "other";
+
+// 반복 규칙
+export interface RepeatRule {
+  type: "daily" | "weekly" | "monthly" | "yearly";
+  days?: number[]; // weekly: [0..6] 요일 배열
+  until?: string;  // 반복 종료일 "YYYY-MM-DD" (없으면 1년)
 }
 
 // 캘린더 일정 (로컬 저장)
 export interface CalendarEvent {
   id: string;
-  date: string; // "YYYY-MM-DD"
+  date: string;       // "YYYY-MM-DD" (시작일 또는 단일일)
+  endDate?: string;   // 다일 일정 종료일 "YYYY-MM-DD"
+  startTime?: string; // "HH:MM"
+  endTime?: string;   // "HH:MM"
   title: string;
   memo?: string;
-  color: string; // 태그 색상
+  color: string;
+  category: EventCategory;
+  isDday?: boolean;         // D-day 지정 여부
+  repeat?: RepeatRule;      // 양력 반복 규칙
+  isHoliday?: boolean;      // 공휴일 (시스템 등록)
   createdAt: string;
+  updatedAt?: string;
   // 음력 반복 일정 (제사 등)
-  isLunarRecurring?: boolean; // 음력 기반 매년 반복
-  lunarMonth?: number; // 음력 월 (1~12)
-  lunarDay?: number; // 음력 일
-  lunarParentId?: string; // 원본 일정 ID (자동 생성된 반복 일정용)
+  isLunarRecurring?: boolean;
+  lunarMonth?: number;
+  lunarDay?: number;
+  lunarParentId?: string;
 }
 
 // 한달 운세 (여러 hook에서 공유)

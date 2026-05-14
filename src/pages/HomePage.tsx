@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type { CSSProperties } from "react";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { useCalendar } from "../hooks/useCalendar";
@@ -6,52 +6,81 @@ import { useFortune } from "../hooks/useFortune";
 import { useCalendarEvents } from "../hooks/useCalendarEvents";
 import { RegistrationForm } from "../components/RegistrationForm";
 import { Calendar } from "../components/Calendar";
+import { WeekView } from "../components/WeekView";
+import { EventListView } from "../components/EventListView";
+import { SearchView } from "../components/SearchView";
+import { EventModal } from "../components/EventModal";
+import { DdayBanner } from "../components/DdayBanner";
 import { FortuneCard } from "../components/FortuneCard";
 import { LuckyDaysCard } from "../components/LuckyDaysCard";
 import { BannerAd } from "../components/BannerAd";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { BottomNav } from "../components/BottomNav";
 import { getZodiacEmoji } from "../lib/zodiac";
 import { today, tomorrow } from "../lib/dateUtils";
+import type { CalendarEvent } from "../types/fortune";
+import type { NewEventInput } from "../hooks/useCalendarEvents";
 
 export function HomePage() {
   const { profile, isLoading: profileLoading, register, reset } = useUserProfile();
   const {
-    todayFortune,
-    tomorrowFortune,
-    specificFortune,
-    isDailyLoading,
-    dailyError,
-    requestTodayFortune,
-    requestTomorrowFortune,
-    requestSpecificFortune,
-    clearSpecificFortune,
+    todayFortune, tomorrowFortune, specificFortune,
+    isDailyLoading, dailyError,
+    requestTodayFortune, requestTomorrowFortune, requestSpecificFortune, clearSpecificFortune,
   } = useFortune(profile);
 
-  const { events, addEvent, addLunarRecurringEvent, removeEvent, eventColors } =
+  const { events, isLoading: eventsLoading, addEvent, updateEvent, removeEvent, getDdayEvents } =
     useCalendarEvents();
 
-  const { monthLabel, calendarDays, goToPrevMonth, goToNextMonth, goToToday } =
-    useCalendar(null, events);
+  const {
+    year, month, viewMode, setViewMode,
+    monthLabel, calendarDays,
+    weekDays, weekLabel,
+    goToPrevMonth, goToNextMonth, goToToday,
+    goToPrevWeek, goToNextWeek,
+  } = useCalendar(null, events);
 
-  // 현재 표시 중인 날짜 (카드 하나만 보임)
+  // 일정 모달 상태
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>(undefined);
+
+  // 운세 상태
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const [showLuckyDays, setShowLuckyDays] = useState(false);
   const [luckyDaysLoading, setLuckyDaysLoading] = useState(false);
 
-  if (profileLoading) {
-    return <LoadingSpinner message="로딩 중..." />;
-  }
+  const openAddModal = useCallback((date?: string) => {
+    setEditingEvent(null);
+    setModalDefaultDate(date ?? today());
+    setModalOpen(true);
+  }, []);
 
-  if (!profile) {
-    return <RegistrationForm onRegister={register} />;
-  }
+  const openEditModal = useCallback((evt: CalendarEvent) => {
+    setEditingEvent(evt);
+    setModalDefaultDate(undefined);
+    setModalOpen(true);
+  }, []);
 
-  const handleRequestFortune = async (date: string) => {
+  const handleSaveEvent = useCallback((input: NewEventInput) => {
+    if (editingEvent) {
+      updateEvent(editingEvent.id, input);
+    } else {
+      addEvent(input);
+    }
+    setModalOpen(false);
+  }, [editingEvent, addEvent, updateEvent]);
+
+  const handleDaySelect = useCallback((date: string) => {
+    // 월간뷰에서 날짜 선택 시 운세 관련 상태 초기화
+    setShowLuckyDays(false);
+  }, []);
+
+  const handleRequestFortune = useCallback(async (date: string) => {
     const todayDate = today();
     const tomorrowDate = tomorrow();
-    setActiveDate(date); // 먼저 선택
-    setShowLuckyDays(false); // 행운의 날 카드 숨김
-
+    setActiveDate(date);
+    setShowLuckyDays(false);
     if (date === todayDate) {
       await requestTodayFortune();
     } else if (date === tomorrowDate) {
@@ -60,183 +89,185 @@ export function HomePage() {
       clearSpecificFortune();
       await requestSpecificFortune(date);
     }
-  };
+  }, [requestTodayFortune, requestTomorrowFortune, requestSpecificFortune, clearSpecificFortune]);
 
-  const handleRequestLuckyDays = async () => {
+  const handleRequestLuckyDays = useCallback(async () => {
     if (!profile) return;
     setLuckyDaysLoading(true);
     try {
       const { showFullScreenAd } = await import("../lib/adManager");
-      await showFullScreenAd(); // 행운의 날은 독립적인 광고 (무료 카운터 차감 없음)
-      setActiveDate(null); // 운세 카드 숨김
+      await showFullScreenAd();
+      setActiveDate(null);
       setShowLuckyDays(true);
     } finally {
       setLuckyDaysLoading(false);
     }
-  };
+  }, [profile]);
 
-  // 현재 보여줄 운세 결정 (마지막 클릭한 날짜 하나만)
   const visibleFortune =
     activeDate === today() ? todayFortune :
     activeDate === tomorrow() ? tomorrowFortune :
-    activeDate ? specificFortune :
-    null;
+    activeDate ? specificFortune : null;
 
   const visibleLabel =
     activeDate === today() ? "오늘의 운세" :
     activeDate === tomorrow() ? "내일의 운세" :
-    activeDate ? `${Number(activeDate.split("-")[1])}월 ${Number(activeDate.split("-")[2])}일 운세` :
-    "";
+    activeDate ? `${Number(activeDate.split("-")[1])}월 ${Number(activeDate.split("-")[2])}일 운세` : "";
+
+  const ddayEvents = getDdayEvents();
+
+  if (profileLoading) return <LoadingSpinner message="로딩 중..." />;
+  if (!profile) return <RegistrationForm onRegister={register} />;
 
   return (
     <div style={styles.container}>
-      {/* 인사말 */}
-      <div style={styles.greeting}>
-        <span style={styles.greetingEmoji}>{getZodiacEmoji(profile.zodiac)}</span>
-        <div style={styles.greetingInfo}>
-          <p style={styles.greetingText}>{profile.name}님, 안녕하세요</p>
-          <p style={styles.greetingSub}>
-            {profile.zodiac}띠
-            {profile.birthTime !== "모름" ? ` · ${profile.birthTime}` : ""}
-            {` · ${profile.gender}성`}
-          </p>
-          <button type="button" onClick={reset} style={styles.resetButton}>
-            정보 초기화
+      {/* 상단 인사말 */}
+      <div style={styles.topBar}>
+        <div style={styles.greeting}>
+          <span style={styles.greetingEmoji}>{getZodiacEmoji(profile.zodiac)}</span>
+          <div>
+            <p style={styles.greetingName}>{profile.name}님</p>
+            <p style={styles.greetingSub}>
+              {profile.zodiac}띠 · {profile.gender}성
+              {profile.birthTime !== "모름" ? ` · ${profile.birthTime}` : ""}
+            </p>
+          </div>
+        </div>
+        <div style={styles.topActions}>
+          <button type="button" style={styles.addFab} onClick={() => openAddModal()}>
+            + 일정
           </button>
+          <button type="button" onClick={reset} style={styles.resetBtn}>초기화</button>
         </div>
       </div>
 
-      {/* 캘린더 (일정 관리 + 운세 접근) */}
-      <Calendar
-        monthLabel={monthLabel}
-        calendarDays={calendarDays}
-        onPrevMonth={goToPrevMonth}
-        onNextMonth={goToNextMonth}
-        onToday={goToToday}
-        onRequestFortune={handleRequestFortune}
-        onAddEvent={addEvent}
-        onAddLunarRecurringEvent={addLunarRecurringEvent}
-        onRemoveEvent={removeEvent}
-        eventColors={eventColors}
-      />
-
-      {isDailyLoading && (
-        <LoadingSpinner message="운세를 생성하고 있어요..." />
+      {/* D-day 배너 (있을 때만) */}
+      {ddayEvents.length > 0 && viewMode === "month" && (
+        <DdayBanner events={ddayEvents} onEventClick={openEditModal} />
       )}
 
-      {luckyDaysLoading && (
-        <LoadingSpinner message="이번 달 행운의 날을 분석하고 있어요..." />
+      {/* ── 뷰 콘텐츠 ── */}
+      {viewMode === "month" && (
+        <>
+          <Calendar
+            monthLabel={monthLabel}
+            calendarDays={calendarDays}
+            onPrevMonth={goToPrevMonth}
+            onNextMonth={goToNextMonth}
+            onToday={goToToday}
+            onRequestFortune={(date) => { void handleRequestFortune(date); }}
+            onDaySelect={handleDaySelect}
+            onAddEvent={openAddModal}
+            onEventClick={openEditModal}
+          />
+
+          {/* 행운의 날 버튼 */}
+          {!showLuckyDays && !isDailyLoading && (
+            <div style={styles.luckyBtnArea}>
+              <button
+                type="button"
+                style={styles.luckyBtn}
+                onClick={() => { void handleRequestLuckyDays(); }}
+                disabled={luckyDaysLoading}
+              >
+                ✨ 이번 달 행운의 날 보기
+              </button>
+            </div>
+          )}
+
+          {luckyDaysLoading && <LoadingSpinner message="이번 달 행운의 날을 분석하고 있어요..." />}
+          {isDailyLoading && <LoadingSpinner message="운세를 생성하고 있어요..." />}
+          {dailyError && <p style={styles.error}>{dailyError}</p>}
+
+          {showLuckyDays && profile && (
+            <div style={{ padding: "0 16px 16px" }}>
+              <LuckyDaysCard profile={profile} onClose={() => setShowLuckyDays(false)} />
+            </div>
+          )}
+
+          {visibleFortune && !isDailyLoading && (
+            <div style={styles.fortuneArea}>
+              <FortuneCard fortune={visibleFortune} label={visibleLabel} />
+            </div>
+          )}
+        </>
       )}
 
-      {dailyError && <p style={styles.error}>{dailyError}</p>}
-
-      {/* 월간 행운의 날 버튼 */}
-      {!showLuckyDays && !isDailyLoading && (
-        <div style={styles.luckyDaysBtnArea}>
-          <button
-            type="button"
-            id="lucky-days-btn"
-            style={styles.luckyDaysBtn}
-            onClick={() => { void handleRequestLuckyDays(); }}
-            disabled={luckyDaysLoading}
-          >
-            ✨ 이번 달 행운의 날 보기
-          </button>
-        </div>
-      )}
-
-      {/* 행운의 날 카드 */}
-      {showLuckyDays && profile && (
-        <LuckyDaysCard
-          profile={profile}
-          onClose={() => setShowLuckyDays(false)}
+      {viewMode === "week" && (
+        <WeekView
+          weekLabel={weekLabel}
+          weekDays={weekDays}
+          onPrevWeek={goToPrevWeek}
+          onNextWeek={goToNextWeek}
+          onToday={goToToday}
+          onDayClick={(date) => openAddModal(date)}
+          onEventClick={openEditModal}
         />
       )}
 
-      {/* 운세 카드 — 날짜를 누르면 항상 아래에 고정 노출, 하나만 */}
-      {visibleFortune && !isDailyLoading && (
-        <div style={styles.fortuneArea}>
-          <FortuneCard fortune={visibleFortune} label={visibleLabel} />
+      {viewMode === "list" && (
+        <EventListView
+          events={events}
+          year={year}
+          month={month}
+          onEventClick={openEditModal}
+          onAddClick={() => openAddModal()}
+        />
+      )}
+
+      {viewMode === "search" && (
+        <SearchView
+          events={events}
+          onEventClick={openEditModal}
+        />
+      )}
+
+      {/* 하단 탭바 */}
+      <BottomNav current={viewMode} onChange={setViewMode} />
+
+      {/* 배너 광고 (탭바 위) */}
+      {viewMode === "month" && (
+        <div style={styles.bannerArea}>
+          <BannerAd />
         </div>
       )}
 
-      {/* 배너 광고 (하단 고정) */}
-      <div style={styles.bannerArea}>
-        <BannerAd />
-      </div>
+      {/* 일정 추가/수정 모달 */}
+      {modalOpen && (
+        <EventModal
+          event={editingEvent}
+          defaultDate={modalDefaultDate}
+          onSave={handleSaveEvent}
+          onDelete={removeEvent}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
 
 const styles: Record<string, CSSProperties> = {
-  container: {
-    minHeight: "100vh",
-    backgroundColor: "#FAFAFA",
-    paddingBottom: "120px",
+  container: { minHeight: "100vh", backgroundColor: "#FAFAFA", paddingBottom: "176px" },
+  topBar: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 8px" },
+  greeting: { display: "flex", alignItems: "center", gap: "10px" },
+  greetingEmoji: { fontSize: "32px" },
+  greetingName: { fontSize: "15px", fontWeight: 700, color: "#1B1D1F", margin: 0 },
+  greetingSub: { fontSize: "12px", color: "#8B95A1", margin: "2px 0 0" },
+  topActions: { display: "flex", alignItems: "center", gap: "8px" },
+  addFab: {
+    padding: "8px 16px", backgroundColor: "#6B4EFF", color: "#fff",
+    border: "none", borderRadius: "20px", fontSize: "14px", fontWeight: 700,
+    cursor: "pointer", boxShadow: "0 2px 8px rgba(107,78,255,0.3)",
   },
-  greeting: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "16px 20px 8px",
-  },
-  greetingEmoji: {
-    fontSize: "36px",
-  },
-  greetingInfo: {
-    display: "flex",
-    flexDirection: "column",
-  },
-  greetingText: {
-    fontSize: "16px",
-    fontWeight: 600,
-    color: "#1B1D1F",
-    margin: 0,
-  },
-  greetingSub: {
-    fontSize: "12px",
-    color: "#8B95A1",
-    margin: "2px 0 0 0",
-  },
-  resetButton: {
-    background: "none",
-    border: "none",
-    fontSize: "12px",
-    color: "#AEB5BC",
-    cursor: "pointer",
-    padding: "2px 0 0 0",
-    textAlign: "left",
-  },
-  error: {
-    fontSize: "13px",
-    color: "#F04452",
-    textAlign: "center",
-    padding: "8px 20px",
-    margin: 0,
-  },
-  bannerArea: {
-    position: "fixed",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-  },
-  fortuneArea: {
-    padding: "0 16px 16px",
-  },
-  luckyDaysBtnArea: {
-    padding: "12px 16px 4px",
-  },
-  luckyDaysBtn: {
-    width: "100%",
-    padding: "14px",
+  resetBtn: { background: "none", border: "none", fontSize: "12px", color: "#AEB5BC", cursor: "pointer" },
+  luckyBtnArea: { padding: "10px 16px 4px" },
+  luckyBtn: {
+    width: "100%", padding: "14px",
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    color: "#fff",
-    border: "none",
-    borderRadius: "14px",
-    fontSize: "15px",
-    fontWeight: 700,
-    cursor: "pointer",
-    letterSpacing: "-0.3px",
+    color: "#fff", border: "none", borderRadius: "14px",
+    fontSize: "15px", fontWeight: 700, cursor: "pointer",
   },
+  error: { fontSize: "13px", color: "#F04452", textAlign: "center", padding: "8px 20px", margin: 0 },
+  fortuneArea: { padding: "0 16px 16px" },
+  bannerArea: { position: "fixed", bottom: "72px", left: 0, right: 0, zIndex: 150 },
 };
