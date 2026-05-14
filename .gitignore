@@ -1,0 +1,19 @@
+node_modules/
+workers/node_modules/
+
+# 환경변수 (절대 커밋 금지!)
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.production.local
+
+# 빌드 결과물
+dist/
+
+# 에디터 / OS
+.DS_Store
+*.log
+
+# wrangler 임시 파일
+workers/.wrangler/

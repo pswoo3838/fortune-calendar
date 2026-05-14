@@ -1,0 +1,14 @@
+{
+  "name": "fortune-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260511.1",
+    "typescript": "~5.7.0",
+    "wrangler": "^3.100.0"
+  }
+}
