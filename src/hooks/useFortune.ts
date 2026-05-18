@@ -38,18 +38,20 @@ async function loadCachedDailyFortune(
   return cached;
 }
 
-function buildMonthlyFortune(
+async function buildMonthlyFortune(
   year: number,
   month: number,
   profile: UserProfile,
   weeklyFortune: WeeklyFortune,
-): MonthlyFortune {
+): Promise<MonthlyFortune> {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const dailyFortunes: DailyFortune[] = [];
 
   for (let day = 1; day <= daysInMonth; day++) {
     const date = formatDate(new Date(year, month, day));
-    dailyFortunes.push(buildDailyFortune(date, profile, weeklyFortune));
+    // getDailyFortune may hit the API if not found, so await it
+    const fortune = await buildDailyFortune(date, profile, weeklyFortune);
+    dailyFortunes.push(fortune);
   }
 
   return {
@@ -145,7 +147,7 @@ export function useFortune(profile: UserProfile | null): UseFortuneReturn {
         await showFullScreenAd();
 
         const weeklyFortune = await getWeeklyFortune(profile);
-        const fortune = buildMonthlyFortune(year, month, profile, weeklyFortune);
+        const fortune = await buildMonthlyFortune(year, month, profile, weeklyFortune);
         setMonthlyFortune(fortune);
       } catch (err) {
         console.error("월간 운세 조회 실패:", err);

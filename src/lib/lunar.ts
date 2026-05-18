@@ -2,7 +2,6 @@
  * 음력 ↔ 양력 변환 유틸리티
  * korean-lunar-calendar 라이브러리 기반
  */
-// @ts-expect-error — korean-lunar-calendar has no type definitions
 import KoreanLunarCalendar from "korean-lunar-calendar";
 
 export interface LunarDate {

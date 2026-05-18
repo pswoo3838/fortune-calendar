@@ -8,7 +8,7 @@
  * @see https://developers-apps-in-toss.toss.im/bedrock/reference/framework/저장소/Storage.md
  */
 
-import type { UserProfile, WeeklyFortune, CalendarEvent, UnlockedFortunes } from "../types/fortune";
+import type { UserProfile, WeeklyFortune, CalendarEvent, UnlockedFortunes, DailyFortune } from "../types/fortune";
 
 const KEYS = {
   PROFILE: "fortune_user_profile",
@@ -45,11 +45,12 @@ async function getNativeStorage(): Promise<StorageModule | null> {
 
   try {
     const fw = await import("@apps-in-toss/web-framework");
-    if (fw.getItem?.isSupported?.()) {
+    const fwAny = fw as any;
+    if (fwAny.getItem?.isSupported?.()) {
       _nativeStorage = {
-        setItem: fw.setItem,
-        getItem: fw.getItem,
-        removeItem: fw.removeItem,
+        setItem: fwAny.setItem,
+        getItem: fwAny.getItem,
+        removeItem: fwAny.removeItem,
       };
     }
   } catch {

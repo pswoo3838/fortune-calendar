@@ -1,4 +1,4 @@
-import type { AIFortuneRequest, AIFortuneResponse } from "../types/fortune";
+import type { AIFortuneRequest, AIFortuneResponse, DailyFortune } from "../types/fortune";
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL || "http://localhost:8787";
 
