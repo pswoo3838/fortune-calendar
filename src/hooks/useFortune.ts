@@ -4,9 +4,9 @@ import {
   getDailyFortune as buildDailyFortune,
   getWeeklyFortune,
 } from "../lib/fortuneService";
-import { loadWeeklyFortuneSync, addUnlockedDate } from "../lib/storage";
+import { addUnlockedDate } from "../lib/storage";
 import { formatDate, today, tomorrow } from "../lib/dateUtils";
-import { showFortuneInterstitial } from "../lib/adManager";
+import { showFortuneInterstitial, showFullScreenAd } from "../lib/adManager";
 
 interface UseFortuneReturn {
   todayFortune: DailyFortune | null;

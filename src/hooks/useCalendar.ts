@@ -22,6 +22,7 @@ interface UseCalendarReturn {
   goToPrevWeek: () => void;
   goToNextWeek: () => void;
   selectedWeekBase: Date;
+  syncToDate: (date: string) => void; // 월간/주간 날짜 싱크
 }
 
 function buildDayData(
@@ -153,6 +154,13 @@ export function useCalendar(
     });
   }, []);
 
+  const syncToDate = useCallback((date: string) => {
+    const [y, m] = date.split("-").map(Number);
+    setYear(y);
+    setMonth(m - 1);
+    setWeekBaseStr(date);
+  }, []);
+
   return {
     year, month, viewMode, setViewMode,
     monthLabel, calendarDays,
@@ -160,5 +168,6 @@ export function useCalendar(
     goToPrevMonth, goToNextMonth, goToToday,
     goToPrevWeek, goToNextWeek,
     selectedWeekBase,
+    syncToDate,
   };
 }

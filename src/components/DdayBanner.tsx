@@ -1,7 +1,6 @@
 import type { CSSProperties } from "react";
 import type { CalendarEvent } from "../types/fortune";
 import { getDdayLabel, getDdayCount, formatDateKR } from "../lib/dateUtils";
-import { CATEGORY_COLORS } from "../hooks/useCalendarEvents";
 
 interface DdayBannerProps {
   events: CalendarEvent[];

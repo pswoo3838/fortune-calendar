@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import type { CalendarDayData, CalendarEvent } from "../types/fortune";
 import { formatTimeKR, timeToMinutes, today } from "../lib/dateUtils";
@@ -9,6 +10,7 @@ interface WeekViewProps {
   onNextWeek: () => void;
   onToday: () => void;
   onDayClick: (date: string) => void;
+  onTimeSlotClick: (date: string, hour: number) => void; // 시간 칸 탭
   onEventClick: (event: CalendarEvent) => void;
 }
 
@@ -17,15 +19,24 @@ const CELL_HEIGHT = 60; // 1시간 = 60px
 const LEFT_WIDTH = 44;
 
 export function WeekView({
-  weekLabel, weekDays, onPrevWeek, onNextWeek, onToday, onDayClick, onEventClick,
+  weekLabel, weekDays, onPrevWeek, onNextWeek, onToday, onDayClick, onTimeSlotClick, onEventClick,
 }: WeekViewProps) {
   const todayStr = today();
   const WEEKDAY_SHORT = ["일", "월", "화", "수", "목", "금", "토"];
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   // 현재 시각 라인 위치 (px)
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const currentLineTop = (currentMinutes / 60) * CELL_HEIGHT;
+
+  // 주간뷰 열릴 때 현재 시각으로 자동 스크롤
+  useEffect(() => {
+    if (timelineRef.current) {
+      const scrollTarget = Math.max(0, currentLineTop - 150); // 현재 시각 위 150px 여유
+      timelineRef.current.scrollTop = scrollTarget;
+    }
+  }, [currentLineTop]);
 
   return (
     <div style={styles.wrapper}>
@@ -74,7 +85,7 @@ export function WeekView({
       <AllDayRow weekDays={weekDays} onEventClick={onEventClick} />
 
       {/* 타임라인 */}
-      <div style={styles.timeline}>
+      <div ref={timelineRef} style={styles.timeline}>
         {/* 시간 라벨 (좌측) */}
         <div style={{ ...styles.hourLabels }}>
           {HOURS.map((h) => (
@@ -109,6 +120,25 @@ export function WeekView({
                   borderRight: colIdx < 6 ? "1px solid #F2F4F6" : "none",
                 }}
               >
+                {/* 빈 시간 칸 클릭 레이어 */}
+                {HOURS.map((h) => (
+                  <button
+                    key={`slot-${h}`}
+                    type="button"
+                    onClick={() => onTimeSlotClick(day.date, h)}
+                    style={{
+                      position: "absolute",
+                      top: `${h * CELL_HEIGHT}px`,
+                      left: 0, right: 0,
+                      height: `${CELL_HEIGHT}px`,
+                      background: "none",
+                      border: "none",
+                      cursor: "cell",
+                      zIndex: 0,
+                    }}
+                    aria-label={`${day.date} ${h}시 일정 추가`}
+                  />
+                ))}
                 {timedEvents.map((evt) => {
                   const top = timeToMinutes(evt.startTime!) / 60 * CELL_HEIGHT;
                   const endMin = evt.endTime

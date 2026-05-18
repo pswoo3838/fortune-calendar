@@ -54,7 +54,7 @@ export async function preloadFullScreenAd(): Promise<void> {
       console.log("[Ad] 전면 광고 미지원 환경");
       return;
     }
-  } catch (err) {
+  } catch {
     console.log("[Ad] 전면 광고 SDK 환경 아님 (개발 환경)");
     return;
   }
@@ -189,7 +189,7 @@ export async function initializeTossAds(): Promise<void> {
       console.log("[Ad] TossAds 미지원 환경");
       return;
     }
-  } catch (err) {
+  } catch {
     console.log("[Ad] 배너 광고 SDK 환경 아님 (개발 환경)");
     return;
   }

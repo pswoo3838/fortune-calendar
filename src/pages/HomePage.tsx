@@ -10,14 +10,16 @@ import { WeekView } from "../components/WeekView";
 import { EventListView } from "../components/EventListView";
 import { SearchView } from "../components/SearchView";
 import { EventModal } from "../components/EventModal";
+import { EventDetailModal } from "../components/EventDetailModal";
 import { DdayBanner } from "../components/DdayBanner";
 import { FortuneCard } from "../components/FortuneCard";
 import { LuckyDaysCard } from "../components/LuckyDaysCard";
 import { BannerAd } from "../components/BannerAd";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { BottomNav } from "../components/BottomNav";
+import { Top } from "@toss/tds-mobile-ait";
 import { getZodiacEmoji } from "../lib/zodiac";
-import { today, tomorrow } from "../lib/dateUtils";
+import { today, tomorrow, minutesToTime } from "../lib/dateUtils";
 import type { CalendarEvent } from "../types/fortune";
 import type { NewEventInput } from "../hooks/useCalendarEvents";
 
@@ -29,8 +31,7 @@ export function HomePage() {
     requestTodayFortune, requestTomorrowFortune, requestSpecificFortune, clearSpecificFortune,
   } = useFortune(profile);
 
-  const { events, isLoading: eventsLoading, addEvent, updateEvent, removeEvent, getDdayEvents } =
-    useCalendarEvents();
+  const { events, addEvent, updateEvent, removeEvent, getDdayEvents } = useCalendarEvents();
 
   const {
     year, month, viewMode, setViewMode,
@@ -38,57 +39,90 @@ export function HomePage() {
     weekDays, weekLabel,
     goToPrevMonth, goToNextMonth, goToToday,
     goToPrevWeek, goToNextWeek,
+    syncToDate,
   } = useCalendar(null, events);
 
-  // 일정 모달 상태
-  const [modalOpen, setModalOpen] = useState(false);
+  // ── 모달 상태 ──
+  const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [returnToDetail, setReturnToDetail] = useState<CalendarEvent | null>(null); // 수정 후 상세로 복귀
   const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>(undefined);
+  const [modalDefaultTitle, setModalDefaultTitle] = useState<string | undefined>(undefined);
+  const [modalDefaultStartTime, setModalDefaultStartTime] = useState<string | undefined>(undefined);
+  const [modalDefaultEndTime, setModalDefaultEndTime] = useState<string | undefined>(undefined);
 
-  // 운세 상태
+  // ── 운세 상태 ──
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const [showLuckyDays, setShowLuckyDays] = useState(false);
   const [luckyDaysLoading, setLuckyDaysLoading] = useState(false);
 
-  const openAddModal = useCallback((date?: string) => {
-    setEditingEvent(null);
-    setModalDefaultDate(date ?? today());
-    setModalOpen(true);
+  // 상세 모달 열기
+  const openDetailModal = useCallback((evt: CalendarEvent) => {
+    setDetailEvent(evt);
   }, []);
 
-  const openEditModal = useCallback((evt: CalendarEvent) => {
-    setEditingEvent(evt);
-    setModalDefaultDate(undefined);
-    setModalOpen(true);
+  const openEditModal = useCallback((
+    evt?: CalendarEvent,
+    date?: string,
+    title?: string,
+    startTime?: string,
+    endTime?: string,
+  ) => {
+    if (evt) setReturnToDetail(evt); // 기존 일정 수정 → 닫으면 상세로
+    else setReturnToDetail(null);
+    setEditingEvent(evt ?? null);
+    setModalDefaultDate(date ?? today());
+    setModalDefaultTitle(title);
+    setModalDefaultStartTime(startTime);
+    setModalDefaultEndTime(endTime);
+    setEditModalOpen(true);
   }, []);
+
+  // 수정 모달 닫기 → 상세로 복귀
+  const handleEditModalClose = useCallback(() => {
+    setEditModalOpen(false);
+    if (returnToDetail) {
+      setDetailEvent(returnToDetail);
+      setReturnToDetail(null);
+    }
+  }, [returnToDetail]);
+
+  // 퀵 추가 처리: "date?title=..." 포맷 파싱
+  const handleAddEvent = useCallback((dateOrQuery: string) => {
+    if (dateOrQuery.includes("?title=")) {
+      const [date, query] = dateOrQuery.split("?title=");
+      const title = decodeURIComponent(query);
+      openEditModal(undefined, date, title);
+    } else {
+      openEditModal(undefined, dateOrQuery);
+    }
+  }, [openEditModal]);
+
+  const handleTimeSlotClick = useCallback((date: string, hour: number) => {
+    const startTime = minutesToTime(hour * 60);
+    const endTime = minutesToTime((hour + 1) * 60);
+    openEditModal(undefined, date, undefined, startTime, endTime);
+  }, [openEditModal]);
 
   const handleSaveEvent = useCallback((input: NewEventInput) => {
-    if (editingEvent) {
-      updateEvent(editingEvent.id, input);
-    } else {
-      addEvent(input);
-    }
-    setModalOpen(false);
+    if (editingEvent) updateEvent(editingEvent.id, input);
+    else addEvent(input);
+    setEditModalOpen(false);
+    setReturnToDetail(null);
   }, [editingEvent, addEvent, updateEvent]);
 
   const handleDaySelect = useCallback((date: string) => {
-    // 월간뷰에서 날짜 선택 시 운세 관련 상태 초기화
+    syncToDate(date);
     setShowLuckyDays(false);
-  }, []);
+  }, [syncToDate]);
 
   const handleRequestFortune = useCallback(async (date: string) => {
-    const todayDate = today();
-    const tomorrowDate = tomorrow();
     setActiveDate(date);
     setShowLuckyDays(false);
-    if (date === todayDate) {
-      await requestTodayFortune();
-    } else if (date === tomorrowDate) {
-      await requestTomorrowFortune();
-    } else {
-      clearSpecificFortune();
-      await requestSpecificFortune(date);
-    }
+    if (date === today()) await requestTodayFortune();
+    else if (date === tomorrow()) await requestTomorrowFortune();
+    else { clearSpecificFortune(); await requestSpecificFortune(date); }
   }, [requestTodayFortune, requestTomorrowFortune, requestSpecificFortune, clearSpecificFortune]);
 
   const handleRequestLuckyDays = useCallback(async () => {
@@ -121,6 +155,11 @@ export function HomePage() {
 
   return (
     <div style={styles.container}>
+      {/* 네비게이션 바 */}
+      <Top
+        title={<Top.TitleParagraph size={20}>포춘 캘린더</Top.TitleParagraph>}
+      />
+
       {/* 상단 인사말 */}
       <div style={styles.topBar}>
         <div style={styles.greeting}>
@@ -133,20 +172,15 @@ export function HomePage() {
             </p>
           </div>
         </div>
-        <div style={styles.topActions}>
-          <button type="button" style={styles.addFab} onClick={() => openAddModal()}>
-            + 일정
-          </button>
-          <button type="button" onClick={reset} style={styles.resetBtn}>초기화</button>
-        </div>
+        <button type="button" onClick={reset} style={styles.resetBtn}>초기화</button>
       </div>
 
-      {/* D-day 배너 (있을 때만) */}
+      {/* D-day 배너 */}
       {ddayEvents.length > 0 && viewMode === "month" && (
-        <DdayBanner events={ddayEvents} onEventClick={openEditModal} />
+        <DdayBanner events={ddayEvents} onEventClick={openDetailModal} />
       )}
 
-      {/* ── 뷰 콘텐츠 ── */}
+      {/* ── 뷰 ── */}
       {viewMode === "month" && (
         <>
           <Calendar
@@ -157,11 +191,10 @@ export function HomePage() {
             onToday={goToToday}
             onRequestFortune={(date) => { void handleRequestFortune(date); }}
             onDaySelect={handleDaySelect}
-            onAddEvent={openAddModal}
-            onEventClick={openEditModal}
+            onAddEvent={handleAddEvent}
+            onEventClick={openDetailModal}
           />
 
-          {/* 행운의 날 버튼 */}
           {!showLuckyDays && !isDailyLoading && (
             <div style={styles.luckyBtnArea}>
               <button
@@ -200,8 +233,9 @@ export function HomePage() {
           onPrevWeek={goToPrevWeek}
           onNextWeek={goToNextWeek}
           onToday={goToToday}
-          onDayClick={(date) => openAddModal(date)}
-          onEventClick={openEditModal}
+          onDayClick={(date) => openEditModal(undefined, date)}
+          onTimeSlotClick={handleTimeSlotClick}
+          onEventClick={openDetailModal}
         />
       )}
 
@@ -210,36 +244,62 @@ export function HomePage() {
           events={events}
           year={year}
           month={month}
-          onEventClick={openEditModal}
-          onAddClick={() => openAddModal()}
+          onEventClick={openDetailModal}
+          onAddClick={() => openEditModal()}
         />
       )}
 
       {viewMode === "search" && (
         <SearchView
           events={events}
-          onEventClick={openEditModal}
+          onEventClick={openDetailModal}
         />
       )}
 
       {/* 하단 탭바 */}
       <BottomNav current={viewMode} onChange={setViewMode} />
 
-      {/* 배너 광고 (탭바 위) */}
+      {/* 배너 광고 */}
       {viewMode === "month" && (
         <div style={styles.bannerArea}>
           <BannerAd />
         </div>
       )}
 
+      {/* ── FAB (우하단 고정, 고정 컨테이너로 감싸서 스크롤 시에도 떠있게 유지) ── */}
+      <div style={styles.fabWrapper}>
+        <button
+          type="button"
+          id="fab-add-event"
+          style={styles.fab}
+          onClick={() => openEditModal()}
+          aria-label="일정 추가"
+        >
+          +
+        </button>
+      </div>
+
+      {/* 일정 상세 모달 */}
+      {detailEvent && (
+        <EventDetailModal
+          event={detailEvent}
+          onEdit={(evt) => { setDetailEvent(null); openEditModal(evt); }}
+          onDelete={(id) => { removeEvent(id); setDetailEvent(null); }}
+          onClose={() => setDetailEvent(null)}
+        />
+      )}
+
       {/* 일정 추가/수정 모달 */}
-      {modalOpen && (
+      {editModalOpen && (
         <EventModal
           event={editingEvent}
           defaultDate={modalDefaultDate}
+          defaultTitle={modalDefaultTitle}
+          defaultStartTime={modalDefaultStartTime}
+          defaultEndTime={modalDefaultEndTime}
           onSave={handleSaveEvent}
           onDelete={removeEvent}
-          onClose={() => setModalOpen(false)}
+          onClose={handleEditModalClose}
         />
       )}
     </div>
@@ -247,27 +307,49 @@ export function HomePage() {
 }
 
 const styles: Record<string, CSSProperties> = {
-  container: { minHeight: "100vh", backgroundColor: "#FAFAFA", paddingBottom: "176px" },
+  container: { position: "relative", minHeight: "100vh", backgroundColor: "#FAFAFA", paddingBottom: "176px", paddingTop: "env(safe-area-inset-top, 0px)" },
   topBar: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 8px" },
   greeting: { display: "flex", alignItems: "center", gap: "10px" },
   greetingEmoji: { fontSize: "32px" },
   greetingName: { fontSize: "15px", fontWeight: 700, color: "#1B1D1F", margin: 0 },
   greetingSub: { fontSize: "12px", color: "#8B95A1", margin: "2px 0 0" },
-  topActions: { display: "flex", alignItems: "center", gap: "8px" },
-  addFab: {
-    padding: "8px 16px", backgroundColor: "#6B4EFF", color: "#fff",
-    border: "none", borderRadius: "20px", fontSize: "14px", fontWeight: 700,
-    cursor: "pointer", boxShadow: "0 2px 8px rgba(107,78,255,0.3)",
-  },
   resetBtn: { background: "none", border: "none", fontSize: "12px", color: "#AEB5BC", cursor: "pointer" },
   luckyBtnArea: { padding: "10px 16px 4px" },
-  luckyBtn: {
-    width: "100%", padding: "14px",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    color: "#fff", border: "none", borderRadius: "14px",
-    fontSize: "15px", fontWeight: 700, cursor: "pointer",
-  },
+  luckyBtn: { width: "100%", padding: "14px", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", color: "#fff", border: "none", borderRadius: "14px", fontSize: "15px", fontWeight: 700, cursor: "pointer" },
   error: { fontSize: "13px", color: "#F04452", textAlign: "center", padding: "8px 20px", margin: 0 },
-  fortuneArea: { padding: "0 16px 16px" },
-  bannerArea: { position: "fixed", bottom: "72px", left: 0, right: 0, zIndex: 150 },
+  // ✅ FAB 우하단 고정 (스크롤 무관, 뷰포트 고정)
+  fabWrapper: {
+    position: "fixed",
+    bottom: "184px", // 배너 위쪽으로 안착되게
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: "100%",
+    maxWidth: "480px",
+    pointerEvents: "none", // 클릭 스루
+    zIndex: 200,
+  },
+  fab: {
+    position: "absolute",
+    right: "20px",
+    bottom: 0,
+    width: "52px",
+    height: "52px",
+    borderRadius: "50%",
+    backgroundColor: "#6B4EFF",
+    color: "#fff",
+    fontSize: "28px",
+    fontWeight: 300,
+    lineHeight: 1,
+    paddingBottom: "4px",
+    border: "none",
+    cursor: "pointer",
+    boxShadow: "0 4px 16px rgba(107,78,255,0.45)",
+    zIndex: 200,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "transform 0.15s, box-shadow 0.15s",
+    pointerEvents: "auto", // 버튼 자신은 클릭되도록
+  },
+  bannerArea: { position: "fixed", bottom: "72px", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "480px", zIndex: 150 },
 };

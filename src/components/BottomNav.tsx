@@ -6,11 +6,11 @@ interface BottomNavProps {
   onChange: (mode: CalendarViewMode) => void;
 }
 
-const TABS: { mode: CalendarViewMode; icon: string; label: string }[] = [
-  { mode: "month", icon: "📅", label: "월간" },
-  { mode: "week", icon: "📆", label: "주간" },
-  { mode: "list", icon: "📋", label: "목록" },
-  { mode: "search", icon: "🔍", label: "검색" },
+const TABS: { mode: CalendarViewMode; label: string }[] = [
+  { mode: "month", label: "월간" },
+  { mode: "week", label: "주간" },
+  { mode: "list", label: "목록" },
+  { mode: "search", label: "검색" },
 ];
 
 export function BottomNav({ current, onChange }: BottomNavProps) {
@@ -26,12 +26,12 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
             style={styles.tab}
             onClick={() => onChange(tab.mode)}
           >
-            <span style={{ fontSize: "22px", lineHeight: 1 }}>{tab.icon}</span>
             <span
               style={{
                 ...styles.tabLabel,
                 color: active ? "#6B4EFF" : "#AEB5BC",
-                fontWeight: active ? 700 : 400,
+                fontWeight: active ? 700 : 500,
+                fontSize: active ? "15px" : "14px",
               }}
             >
               {tab.label}
@@ -46,7 +46,8 @@ export function BottomNav({ current, onChange }: BottomNavProps) {
 
 const styles: Record<string, CSSProperties> = {
   nav: {
-    position: "fixed", bottom: 0, left: 0, right: 0,
+    position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
+    width: "100%", maxWidth: "480px",
     height: "72px",
     display: "flex",
     backgroundColor: "#fff",
@@ -60,7 +61,7 @@ const styles: Record<string, CSSProperties> = {
     gap: "3px", background: "none", border: "none", cursor: "pointer",
     position: "relative",
   },
-  tabLabel: { fontSize: "11px" },
+  tabLabel: { fontSize: "14px" },
   indicator: {
     position: "absolute", top: 0,
     width: "24px", height: "3px",

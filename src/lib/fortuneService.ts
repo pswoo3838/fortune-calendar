@@ -2,12 +2,10 @@ import type {
   UserProfile,
   WeeklyFortune,
   DailyFortune,
-  FortuneGrade,
-  FortuneScores,
 } from "../types/fortune";
 import { fetchWeeklyFortune } from "./api";
 import { saveWeeklyFortune, loadWeeklyFortuneSync } from "./storage";
-import { getWeekRange, formatDate } from "./dateUtils";
+import { getWeekRange } from "./dateUtils";
 
 
 
