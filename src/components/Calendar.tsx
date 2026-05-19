@@ -16,7 +16,6 @@ interface CalendarProps {
 }
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-const LONG_PRESS_MS = 500;
 
 export function Calendar({
   monthLabel, calendarDays,
@@ -24,10 +23,7 @@ export function Calendar({
   onRequestFortune, onDaySelect, onAddEvent, onEventClick,
 }: CalendarProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
-  const [quickAddTitle, setQuickAddTitle] = useState("");
   const tomorrowDate = tomorrowFn();
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedPanelRef = useRef<HTMLDivElement>(null);
 
   // 날짜 선택 시 선택 패널이 보이도록 스크롤
@@ -42,33 +38,11 @@ export function Calendar({
   const handleDayClick = (day: CalendarDayData) => {
     if (!day.isCurrentMonth) return;
     if (selectedDate === day.date) {
-      // 이미 선택된 날 다시 탭 → 선택 해제 (빠른 추가는 롱프레스)
       setSelectedDate(null);
     } else {
       setSelectedDate(day.date);
       onDaySelect(day.date);
     }
-  };
-
-  const handleLongPressStart = (day: CalendarDayData) => {
-    if (!day.isCurrentMonth) return;
-    longPressTimer.current = setTimeout(() => {
-      setQuickAddDate(day.date);
-      setQuickAddTitle("");
-    }, LONG_PRESS_MS);
-  };
-
-  const handleLongPressEnd = () => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-  };
-
-  const handleQuickAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (quickAddTitle.trim() && quickAddDate) {
-      onAddEvent(quickAddDate + "?title=" + encodeURIComponent(quickAddTitle.trim()));
-    }
-    setQuickAddDate(null);
-    setQuickAddTitle("");
   };
 
   const dayNumber = (dateStr: string) => Number.parseInt(dateStr.split("-")[2], 10);
@@ -196,10 +170,6 @@ export function Calendar({
                       type="button"
                       key={day.date}
                       onClick={() => handleDayClick(day)}
-                      onMouseDown={() => handleLongPressStart(day)}
-                      onMouseUp={handleLongPressEnd}
-                      onTouchStart={() => handleLongPressStart(day)}
-                      onTouchEnd={handleLongPressEnd}
                       style={{
                         ...styles.dayCell,
                         opacity: day.isCurrentMonth ? 1 : 0.25,
@@ -320,40 +290,9 @@ export function Calendar({
         </div>
       </div>
 
-      {/* 빠른 일정 추가 인라인 입력 */}
-      {quickAddDate && (
-        <div style={styles.quickAddOverlay} onClick={() => setQuickAddDate(null)}>
-          <form
-            style={styles.quickAddBox}
-            onClick={(e) => e.stopPropagation()}
-            onSubmit={handleQuickAddSubmit}
-          >
-            <p style={styles.quickAddDate}>{quickAddDate.replace(/-/g, ".")} 일정 추가</p>
-            <div style={styles.quickAddRow}>
-              <input
-                autoFocus
-                type="text"
-                placeholder="일정 제목..."
-                value={quickAddTitle}
-                onChange={(e) => setQuickAddTitle(e.target.value)}
-                style={styles.quickAddInput}
-                maxLength={50}
-              />
-              <button type="submit" style={styles.quickAddOk} disabled={!quickAddTitle.trim()}>추가</button>
-            </div>
-            <button
-              type="button"
-              style={styles.quickAddFull}
-              onClick={() => { setQuickAddDate(null); onAddEvent(quickAddDate); }}
-            >
-              상세 설정으로 추가 →
-            </button>
-          </form>
-        </div>
-      )}
 
       {/* 선택 날짜 패널 */}
-      {selectedDate && !quickAddDate && (() => {
+      {selectedDate && (() => {
         const day = calendarDays.find((d) => d.date === selectedDate);
         if (!day) return null;
         return (
@@ -462,12 +401,5 @@ const styles: Record<string, CSSProperties> = {
   miniEventTitle: { fontSize: "13px", fontWeight: 600, color: "#1B1D1F" },
   miniEventTime: { fontSize: "11px", color: "#8B95A1" },
   ddayPill: { fontSize: "11px", fontWeight: 700, color: "#6B4EFF", backgroundColor: "#EDE9FF", padding: "2px 6px", borderRadius: "10px" },
-  // 빠른 일정 추가
-  quickAddOverlay: { position: "fixed", inset: 0, zIndex: 300, backgroundColor: "rgba(0,0,0,0.3)", display: "flex", alignItems: "flex-end" },
-  quickAddBox: { width: "100%", backgroundColor: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 20px 40px" },
-  quickAddDate: { fontSize: "13px", color: "#8B95A1", margin: "0 0 10px", fontWeight: 600 },
-  quickAddRow: { display: "flex", gap: "8px", marginBottom: "10px" },
-  quickAddInput: { flex: 1, fontSize: "16px", padding: "10px 14px", border: "1.5px solid #6B4EFF", borderRadius: "10px", outline: "none" },
-  quickAddOk: { padding: "10px 16px", backgroundColor: "#6B4EFF", color: "#fff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 700, cursor: "pointer" },
-  quickAddFull: { width: "100%", padding: "12px", background: "none", border: "1px solid #E5E8EB", borderRadius: "10px", fontSize: "13px", color: "#6B7684", cursor: "pointer" },
 };
+
