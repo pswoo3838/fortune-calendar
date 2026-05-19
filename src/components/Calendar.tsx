@@ -416,10 +416,10 @@ const styles: Record<string, CSSProperties> = {
   grid: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "1px" },
   dayCell: {
     display: "flex", flexDirection: "column", alignItems: "stretch",
-    padding: "2px", borderRadius: "8px",
-    minHeight: "80px",             // ← 넓혀서 이벤트 바 표시
+    padding: "2px", borderRadius: "0",   /* borderRadius 제거 - 격자선과 어울리도록 */
+    minHeight: "80px",
     position: "relative",
-    background: "none",
+    backgroundColor: "#fff",            /* 흰색 배경 → 1px gap만 회색 격자선으로 노출 */
     gap: "1px",
   },
   dateNumWrap: {
