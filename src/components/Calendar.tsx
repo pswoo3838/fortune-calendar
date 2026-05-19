@@ -125,7 +125,7 @@ export function Calendar({
 
         const BAR_H = 14;
         const BAR_GAP = 2;
-        const BAR_TOP = 46;   // cell 2px padding + 44px 날짜 헤더 = 46px
+        const BAR_TOP = 54;   // cell 2px padding + 52px 날짜 헤더 = 54px
 
         return weeks.map((week, weekIdx) => {
           const mdSpans = getMultiDaySpans(week);
@@ -187,8 +187,8 @@ export function Calendar({
                         minHeight: `${80 + Math.max(0, reservedH)}px`,
                       }}
                     >
-                      {/* 날짜 헤더: 고정 44px = BAR_TOP(46) - cell padding(2) */}
-                      <div style={{ height: 44, flexShrink: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      {/* 날짜 헤더: 고정 52px = BAR_TOP(54) - cell padding(2). 넉넉하게 잡아 글씨가 잘리지 않게 함 */}
+                      <div style={{ height: 52, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
                         <div style={{ ...styles.dateNumWrap, backgroundColor: bgColor }}>
                           <span style={{ ...styles.dayNumber, color: numColor, fontWeight: day.isToday ? 800 : 500 }}>
                             {dayNumber(day.date)}
