@@ -155,9 +155,9 @@ export function Calendar({
                   const localMaxLane = mdSpans
                     .filter(s => s.startCol <= cellIdx && cellIdx <= s.endCol)
                     .reduce((max, s) => Math.max(max, s.lane), -1);
-                  // 날짜 헤더 38px 고정이므로 spacer = lane 수 × bar 높이만
+                  // spacer = 바들이 차지하는 높이 (마지막 GAP 제외)
                   const cellReservedH = localMaxLane >= 0
-                    ? (localMaxLane + 1) * (BAR_H + BAR_GAP)
+                    ? (localMaxLane + 1) * (BAR_H + BAR_GAP) - BAR_GAP
                     : 0;
 
                   const numColor = day.isToday
@@ -243,8 +243,8 @@ export function Calendar({
                     onClick={(e) => { e.stopPropagation(); const d = week[span.startCol]; if (d) handleDayClick(d); }}
                     style={{
                       position: "absolute",
-                      left: `${leftPct}%`,
-                      width: `${widthPct}%`,
+                      left: `calc(${leftPct}% + ${span.continuesLeft ? 0 : 2}px)`,
+                      width: `calc(${widthPct}% - ${(span.continuesLeft ? 0 : 2) + (span.continuesRight ? 0 : 2)}px)`,
                       top: topPx,
                       height: BAR_H,
                       backgroundColor: span.event.color,
