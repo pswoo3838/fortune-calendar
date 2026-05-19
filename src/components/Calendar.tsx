@@ -159,8 +159,14 @@ export function Calendar({
           const reservedH = maxLane >= 0 ? BAR_TOP + (maxLane + 1) * (BAR_H + BAR_GAP) - 28 : 0;
 
           return (
-            <div key={weekIdx} style={{ position: "relative", marginBottom: "1px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "1px" }}>
+            <div key={weekIdx} style={{ position: "relative" }}>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(7, 1fr)",
+                gap: "1px",
+                backgroundColor: "#E5E8EB",   /* 1px gap이 회색 격자선으로 보임 */
+                borderBottom: "1px solid #E5E8EB",  /* 주(week) 행 간 수평 구분선 */
+              }}>
                 {week.map((day) => {
                   const dow = new Date(day.date + "T00:00:00").getDay();
                   const isSelected = selectedDate === day.date;
@@ -259,8 +265,8 @@ export function Calendar({
                     onClick={(e) => { e.stopPropagation(); const d = week[span.startCol]; if (d) handleDayClick(d); }}
                     style={{
                       position: "absolute",
-                      left: `calc(${leftPct}% + 3px)`,
-                      width: `calc(${widthPct}% - 6px)`,
+                      left: `${leftPct}%`,
+                      width: `${widthPct}%`,
                       top: topPx,
                       height: BAR_H,
                       backgroundColor: span.event.color,
