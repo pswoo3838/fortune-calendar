@@ -6,18 +6,27 @@
  * @see https://developers-apps-in-toss.toss.im/bedrock/reference/framework/광고/BannerAd.md
  *
  * 광고 그룹 ID:
- *   - 테스트 전면: ait-ad-test-interstitial-id
- *   - 테스트 배너: ait-ad-test-banner-id
- *   - 프로덕션 ID는 앱인토스 콘솔에서 발급 후 교체
+ *   - 전면형: ait.v2.live.0f9946169c834168
+ *   - 하단 배너: ait.v2.live.f300e65722924e6d
  */
 
 // ──────────────────────────────────────────────
-// 광고 그룹 ID (출시 시 콘솔에서 발급받은 ID로 교체)
+// 광고 그룹 ID
 // ──────────────────────────────────────────────
+// [운영 환경 광고 ID]
 const AD_GROUP = {
-  INTERSTITIAL: "ait-ad-test-interstitial-id", // TODO: 프로덕션 전면 광고 ID
-  BANNER: "ait-ad-test-banner-id", // TODO: 프로덕션 배너 광고 ID
+  INTERSTITIAL: "ait.v2.live.0f9946169c834168", // 전면형 광고
+  BANNER: "ait.v2.live.f300e65722924e6d",       // 하단 배너 광고
 } as const;
+
+// [테스트/샌드박스 광고 ID - 필요 시 위의 AD_GROUP을 주석 처리하고 아래 주석을 해제하여 사용하세요]
+/*
+const AD_GROUP = {
+  INTERSTITIAL: "ait-ad-test-interstitial-id", // 테스트 전면형 광고
+  BANNER: "ait-ad-test-banner-id",             // 테스트 하단 배너 광고
+} as const;
+*/
+
 
 // ──────────────────────────────────────────────
 // 프레임워크 모듈 로딩 (lazy, 토스 앱 외 환경 graceful fallback)
