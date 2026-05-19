@@ -363,11 +363,11 @@ const styles: Record<string, CSSProperties> = {
   grid: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "1px" },
   dayCell: {
     display: "flex", flexDirection: "column", alignItems: "stretch",
-    padding: "2px", borderRadius: "0",   /* borderRadius 제거 - 격자선과 어울리도록 */
+    padding: "2px", borderRadius: "0",
     minHeight: "80px",
     position: "relative",
-    backgroundColor: "#fff",            /* 흰색 배경 → 1px gap만 회색 격자선으로 노출 */
-    gap: "1px",
+    backgroundColor: "#fff",
+    gap: 0,   /* gap 제거 - 오버레이 좌표 계산과 정확히 일치시키기 위해 */
   },
   dateNumWrap: {
     width: "26px", height: "26px", borderRadius: "50%",
@@ -388,6 +388,7 @@ const styles: Record<string, CSSProperties> = {
     textAlign: "left",
     flexShrink: 0,
     overflow: "hidden",
+    marginTop: "1px",   /* gap 대신 개별 마진으로 간격 */
   },
   eventBarText: { fontSize: "9px", fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" },
   moreLabel: { fontSize: "8px", color: "#8B95A1", textAlign: "center", paddingTop: "1px" },
