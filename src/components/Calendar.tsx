@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { CSSProperties } from "react";
 import type { CalendarDayData, CalendarEvent } from "../types/fortune";
 import { tomorrow as tomorrowFn } from "../lib/dateUtils";
@@ -28,6 +28,16 @@ export function Calendar({
   const [quickAddTitle, setQuickAddTitle] = useState("");
   const tomorrowDate = tomorrowFn();
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedPanelRef = useRef<HTMLDivElement>(null);
+
+  // 날짜 선택 시 선택 패널이 보이도록 스크롤
+  useEffect(() => {
+    if (selectedDate && selectedPanelRef.current) {
+      setTimeout(() => {
+        selectedPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
+  }, [selectedDate]);
 
   const handleDayClick = (day: CalendarDayData) => {
     if (!day.isCurrentMonth) return;
@@ -84,124 +94,205 @@ export function Calendar({
         ))}
       </div>
 
-      {/* 달력 그리드 */}
-      <div style={styles.grid}>
-        {calendarDays.map((day) => {
-          const dow = new Date(day.date + "T00:00:00").getDay();
-          const isSelected = selectedDate === day.date;
-          const isHoliday = !!day.holidayName || (dow === 0 && day.isCurrentMonth);
-          const isTomorrow = day.date === tomorrowDate;
-          const visibleEvents = day.events.slice(0, 2);
-          const moreCount = day.events.length - 2;
+      {/* 달력 그리드 - 주(week) 행 단위로 렌더링 */}
+      {(() => {
+        const weeks: CalendarDayData[][] = [];
+        for (let i = 0; i < calendarDays.length; i += 7) {
+          weeks.push(calendarDays.slice(i, i + 7));
+        }
 
-          const numColor = day.isToday
-            ? "#fff"
-            : !day.isCurrentMonth ? "#D1D6DB"
-            : isHoliday ? "#F04452"
-            : dow === 6 ? "#3182F6"
-            : "#1B1D1F";
+        const getMultiDaySpans = (week: CalendarDayData[]) => {
+          const weekStart = week[0].date;
+          const weekEnd = week[6].date;
+          const seen = new Set<string>();
+          const spans: Array<{
+            event: CalendarEvent;
+            startCol: number;
+            endCol: number;
+            lane: number;
+            continuesLeft: boolean;
+            continuesRight: boolean;
+          }> = [];
 
-          const bgColor = day.isToday
-            ? "#6B4EFF"
-            : isTomorrow && day.isCurrentMonth ? "#EDE9FF"
-            : isSelected ? "#F4F1FF"
-            : "transparent";
+          week.forEach((day) => {
+            day.events.forEach((evt) => {
+              if (seen.has(evt.id)) return;
+              const evtEnd = evt.endDate || evt.date;
+              if (evtEnd <= evt.date) return;
+              if (evt.date > weekEnd || evtEnd < weekStart) return;
+              seen.add(evt.id);
+
+              const startCol = week.findIndex((d) => d.date >= evt.date);
+              const endIdx = [...week].reverse().findIndex((d) => d.date <= evtEnd);
+              const endCol = endIdx === -1 ? 6 : 6 - endIdx;
+
+              spans.push({
+                event: evt,
+                startCol: Math.max(0, startCol === -1 ? 0 : startCol),
+                endCol: Math.min(6, endCol),
+                lane: 0,
+                continuesLeft: evt.date < weekStart,
+                continuesRight: evtEnd > weekEnd,
+              });
+            });
+          });
+
+          const laneEnds: number[] = [];
+          spans.sort((a, b) => a.startCol - b.startCol);
+          spans.forEach((span) => {
+            let lane = 0;
+            while (laneEnds[lane] !== undefined && laneEnds[lane] >= span.startCol) lane++;
+            span.lane = lane;
+            laneEnds[lane] = span.endCol;
+          });
+
+          return spans;
+        };
+
+        const BAR_H = 14;
+        const BAR_GAP = 2;
+        const BAR_TOP = 32;
+
+        return weeks.map((week, weekIdx) => {
+          const mdSpans = getMultiDaySpans(week);
+          const maxLane = mdSpans.length > 0 ? Math.max(...mdSpans.map((s) => s.lane)) : -1;
+          const reservedH = maxLane >= 0 ? BAR_TOP + (maxLane + 1) * (BAR_H + BAR_GAP) - 28 : 0;
 
           return (
-            <button
-              type="button"
-              key={day.date}
-              onClick={() => handleDayClick(day)}
-              onMouseDown={() => handleLongPressStart(day)}
-              onMouseUp={handleLongPressEnd}
-              onTouchStart={() => handleLongPressStart(day)}
-              onTouchEnd={handleLongPressEnd}
-              style={{
-                ...styles.dayCell,
-                opacity: day.isCurrentMonth ? 1 : 0.25,
-                border: isSelected && !day.isToday ? "1.5px solid #6B4EFF" : "1.5px solid transparent",
-                cursor: day.isCurrentMonth ? "pointer" : "default",
-              }}
-            >
-              {/* 날짜 숫자 */}
-              <div style={{ ...styles.dateNumWrap, backgroundColor: bgColor }}>
-                <span style={{ ...styles.dayNumber, color: numColor, fontWeight: day.isToday ? 800 : 500 }}>
-                  {dayNumber(day.date)}
-                </span>
+            <div key={weekIdx} style={{ position: "relative", marginBottom: "1px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "1px" }}>
+                {week.map((day) => {
+                  const dow = new Date(day.date + "T00:00:00").getDay();
+                  const isSelected = selectedDate === day.date;
+                  const isHoliday = !!day.holidayName || (dow === 0 && day.isCurrentMonth);
+                  const isTomorrow = day.date === tomorrowDate;
+
+                  const singleEvts = day.events.filter((e) => !e.endDate || e.endDate <= e.date);
+                  const visibleSingle = singleEvts.slice(0, 2);
+                  // 단일일 이벤트 중 표시 못한 개수만 +N으로 표시
+                  const moreCount = singleEvts.length - visibleSingle.length;
+
+                  const numColor = day.isToday
+                    ? "#fff"
+                    : !day.isCurrentMonth ? "#D1D6DB"
+                    : isHoliday ? "#F04452"
+                    : dow === 6 ? "#3182F6"
+                    : "#1B1D1F";
+
+                  const bgColor = day.isToday
+                    ? "#6B4EFF"
+                    : isTomorrow && day.isCurrentMonth ? "#EDE9FF"
+                    : isSelected ? "#F4F1FF"
+                    : "transparent";
+
+                  return (
+                    <button
+                      type="button"
+                      key={day.date}
+                      onClick={() => handleDayClick(day)}
+                      onMouseDown={() => handleLongPressStart(day)}
+                      onMouseUp={handleLongPressEnd}
+                      onTouchStart={() => handleLongPressStart(day)}
+                      onTouchEnd={handleLongPressEnd}
+                      style={{
+                        ...styles.dayCell,
+                        opacity: day.isCurrentMonth ? 1 : 0.25,
+                        border: isSelected && !day.isToday ? "1.5px solid #6B4EFF" : "1.5px solid transparent",
+                        cursor: day.isCurrentMonth ? "pointer" : "default",
+                        minHeight: `${80 + Math.max(0, reservedH)}px`,
+                      }}
+                    >
+                      <div style={{ ...styles.dateNumWrap, backgroundColor: bgColor }}>
+                        <span style={{ ...styles.dayNumber, color: numColor, fontWeight: day.isToday ? 800 : 500 }}>
+                          {dayNumber(day.date)}
+                        </span>
+                      </div>
+
+                      {day.lunarLabel && day.isCurrentMonth && (
+                        <span style={styles.lunarLabel}>{day.lunarLabel.replace("음 ", "")}</span>
+                      )}
+
+                      {day.holidayName && day.isCurrentMonth && (
+                        <span style={styles.holidayLabel} title={day.holidayName}>
+                          {day.holidayName.length > 4 ? day.holidayName.slice(0, 4) + "…" : day.holidayName}
+                        </span>
+                      )}
+
+                      {day.isSonEomneun && !day.holidayName && day.isCurrentMonth && (
+                        <span style={styles.sonTag}>손✕</span>
+                      )}
+
+                      {/* 다중일 오버레이를 위한 예약 공간 */}
+                      {reservedH > 0 && <div style={{ height: reservedH, flexShrink: 0 }} />}
+
+                      {day.isCurrentMonth && visibleSingle.map((evt) => (
+                        <button
+                          key={evt.id}
+                          type="button"
+                          // 셀 이벤트 바 클릭 → 날짜 선택(패널 오픈), 패널의 목록 클릭 시 상세 오픈
+                          onClick={(e) => { e.stopPropagation(); handleDayClick(day); }}
+                          style={{ ...styles.eventBar, backgroundColor: evt.color }}
+                          title={evt.title}
+                        >
+                          <span style={styles.eventBarText}>{evt.title}</span>
+                        </button>
+                      ))}
+
+                      {moreCount > 0 && day.isCurrentMonth && (
+                        <span style={styles.moreLabel}>+{moreCount}개</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* 음력 */}
-              {day.lunarLabel && day.isCurrentMonth && (
-                <span style={styles.lunarLabel}>{day.lunarLabel.replace("음 ", "")}</span>
-              )}
-
-              {/* 공휴일 이름 */}
-              {day.holidayName && day.isCurrentMonth && (
-                <span style={styles.holidayLabel} title={day.holidayName}>
-                  {day.holidayName.length > 4 ? day.holidayName.slice(0, 4) + "…" : day.holidayName}
-                </span>
-              )}
-
-              {/* 손없는 날 */}
-              {day.isSonEomneun && !day.holidayName && day.isCurrentMonth && (
-                <span style={styles.sonTag}>손✕</span>
-              )}
-
-              {/* 이벤트 바 */}
-              {day.isCurrentMonth && visibleEvents.map((evt) => {
-                const evtEnd = evt.endDate || evt.date;
-                const isMultiDay = evtEnd > evt.date;
-
-                // 주 행 경계: 일(0) = 주 시작, 토(6) = 주 끝
-                // 이전 날과 연결: 오늘이 이벤트 시작일이 아니고 주 시작일(일)이 아닐 때
-                const spanLeft = isMultiDay && evt.date < day.date && dow !== 0;
-                // 다음 날과 연결: 이벤트가 오늘 이후에도 계속되고 주 끝(토)이 아닐 때
-                const spanRight = isMultiDay && evtEnd > day.date && dow !== 6;
-
-                // 왼쪽으로 넓힐 양(셀 왼쪽 패딩 2px), 오른쪽으로 넓힐 양(패딩 2px + 격자 간격 1px)
-                const extL = spanLeft ? 2 : 0;
-                const extR = spanRight ? 3 : 0;
+              {/* 다중일 이벤트 연속 바 오버레이 */}
+              {mdSpans.map((span) => {
+                const colPct = 100 / 7;
+                const leftPct = span.startCol * colPct;
+                const widthPct = (span.endCol - span.startCol + 1) * colPct;
+                const topPx = BAR_TOP + span.lane * (BAR_H + BAR_GAP);
 
                 return (
-                  <button
-                    key={evt.id}
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onEventClick(evt); }}
+                  <div
+                    key={`${span.event.id}-w${weekIdx}`}
+                    onClick={(e) => { e.stopPropagation(); onEventClick(span.event); }}
                     style={{
-                      ...styles.eventBar,
-                      backgroundColor: evt.color,
-                      // 연결 방향에 따라 모서리 둥글기 제거
-                      borderTopLeftRadius: spanLeft ? 0 : 3,
-                      borderBottomLeftRadius: spanLeft ? 0 : 3,
-                      borderTopRightRadius: spanRight ? 0 : 3,
-                      borderBottomRightRadius: spanRight ? 0 : 3,
-                      // 셀 패딩/간격을 음수 마진으로 메워 시각적으로 연결
-                      ...(extL > 0 || extR > 0 ? {
-                        marginLeft: `-${extL}px`,
-                        width: `calc(100% + ${extL + extR}px)`,
-                        position: "relative",
-                        zIndex: 2,
-                      } : {}),
+                      position: "absolute",
+                      left: `calc(${leftPct}% + 3px)`,
+                      width: `calc(${widthPct}% - 6px)`,
+                      top: topPx,
+                      height: BAR_H,
+                      backgroundColor: span.event.color,
+                      borderRadius: `${span.continuesLeft ? 0 : 3}px ${span.continuesRight ? 0 : 3}px ${span.continuesRight ? 0 : 3}px ${span.continuesLeft ? 0 : 3}px`,
+                      cursor: "pointer",
+                      zIndex: 10,
+                      overflow: "hidden",
+                      display: "flex",
+                      alignItems: "center",
                     }}
-                    title={evt.title}
+                    title={span.event.title}
                   >
-                    {/* 연속 셀에서는 제목 숨김, 첫 날만 표시 */}
-                    <span style={{ ...styles.eventBarText, visibility: spanLeft ? "hidden" : "visible" }}>
-                      {evt.title}
+                    <span style={{
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      color: "#fff",
+                      paddingLeft: "4px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      visibility: span.continuesLeft ? "hidden" : "visible",
+                    }}>
+                      {span.event.title}
                     </span>
-                  </button>
+                  </div>
                 );
               })}
-
-
-              {/* +N개 더 */}
-              {moreCount > 0 && day.isCurrentMonth && (
-                <span style={styles.moreLabel}>+{moreCount}개</span>
-              )}
-            </button>
+            </div>
           );
-        })}
-      </div>
+        });
+      })()}
+
 
       {/* 범례 */}
       <div style={styles.legend}>
@@ -260,7 +351,7 @@ export function Calendar({
         const day = calendarDays.find((d) => d.date === selectedDate);
         if (!day) return null;
         return (
-          <div style={styles.selectedPanel}>
+          <div ref={selectedPanelRef} style={styles.selectedPanel}>
             <div style={styles.selectedPanelHeader}>
               <div>
                 <p style={styles.selectedTitle}>
