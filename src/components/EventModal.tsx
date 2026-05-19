@@ -151,43 +151,60 @@ export function EventModal({ event, defaultDate, defaultTitle, defaultStartTime,
             maxLength={50}
           />
 
-          {/* 날짜 */}
+          {/* 날짜 + 시간 통합 */}
           <div style={styles.section}>
-            <div style={styles.row}>
-              <span style={styles.label}>📅 날짜</span>
-              <input 
-                type="date" 
-                value={date} 
-                onChange={(e) => {
-                  const newDate = e.target.value;
-                  setDate(newDate);
-                  if (!endDate || endDate < newDate) setEndDate(newDate);
-                }} 
-                style={styles.dateInput} 
-              />
+            {/* 시작 */}
+            <div style={styles.dtRow}>
+              <span style={styles.dtLabel}>시작</span>
+              <div style={styles.dtInputs}>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => {
+                    const newDate = e.target.value;
+                    setDate(newDate);
+                    if (!endDate || endDate < newDate) setEndDate(newDate);
+                  }}
+                  style={styles.dtDateInput}
+                />
+                {!allDay && (
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    style={styles.dtTimeInput}
+                  />
+                )}
+              </div>
             </div>
-            <div style={styles.row}>
-              <span style={styles.label}>끝나는 날</span>
-              <input type="date" value={endDate} min={date} onChange={(e) => setEndDate(e.target.value)} style={styles.dateInput} />
-            </div>
-          </div>
 
-          {/* 종일 / 시간 */}
-          <div style={styles.section}>
-            <div style={styles.row}>
-              <span style={styles.label}>⏰ 종일</span>
+            {/* 종료 */}
+            <div style={styles.dtRow}>
+              <span style={styles.dtLabel}>종료</span>
+              <div style={styles.dtInputs}>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={date}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  style={styles.dtDateInput}
+                />
+                {!allDay && (
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    style={styles.dtTimeInput}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* 종일 */}
+            <div style={styles.dtRow}>
+              <span style={styles.dtLabel}>종일</span>
               <Toggle value={allDay} onChange={setAllDay} />
             </div>
-            {!allDay && (
-              <div style={styles.row}>
-                <span style={styles.label}>시간</span>
-                <div style={styles.timeRow}>
-                  <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} style={styles.timeInput} />
-                  <span style={styles.timeSep}>—</span>
-                  <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} style={styles.timeInput} />
-                </div>
-              </div>
-            )}
           </div>
 
           {/* 카테고리 */}
@@ -369,6 +386,12 @@ const styles: Record<string, CSSProperties> = {
   timeRow: { display: "flex", alignItems: "center", gap: "8px" },
   timeInput: { fontSize: "14px", color: "#1B1D1F", border: "1px solid #E5E8EB", borderRadius: "8px", padding: "6px 10px", backgroundColor: "#F9FAFB" },
   timeSep: { color: "#AEB5BC" },
+  // 날짜+시간 한 줄 레이아웃
+  dtRow: { display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: "44px", borderBottom: "1px solid #F2F4F6", paddingBottom: "2px" },
+  dtLabel: { fontSize: "13px", color: "#8B95A1", fontWeight: 600, minWidth: "32px" },
+  dtInputs: { display: "flex", alignItems: "center", gap: "6px" },
+  dtDateInput: { fontSize: "14px", color: "#1B1D1F", border: "none", outline: "none", backgroundColor: "transparent", cursor: "pointer", fontFamily: "inherit" },
+  dtTimeInput: { fontSize: "14px", color: "#6B4EFF", fontWeight: 600, border: "none", outline: "none", backgroundColor: "transparent", cursor: "pointer", fontFamily: "inherit" },
   categoryRow: { display: "flex", flexWrap: "wrap", gap: "8px" },
   categoryBtn: { padding: "6px 14px", borderRadius: "20px", fontSize: "13px", fontWeight: 600, border: "none", cursor: "pointer", transition: "all 0.15s" },
   memo: { width: "100%", fontSize: "14px", color: "#1B1D1F", border: "1px solid #E5E8EB", borderRadius: "12px", padding: "12px", resize: "none", outline: "none", backgroundColor: "#F9FAFB", boxSizing: "border-box", fontFamily: "inherit" },

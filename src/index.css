@@ -35,3 +35,15 @@ body {
     margin: 0 auto;
   }
 }
+
+/* 날짜/시간 input 기본 달력·시계 아이콘 제거 */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+input[type="date"],
+input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
