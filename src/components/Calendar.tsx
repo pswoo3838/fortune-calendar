@@ -141,7 +141,7 @@ export function Calendar({
                 backgroundColor: "#E5E8EB",   /* 1px gap이 회색 격자선으로 보임 */
                 borderBottom: "1px solid #E5E8EB",  /* 주(week) 행 간 수평 구분선 */
               }}>
-                {week.map((day) => {
+                {week.map((day, cellIdx) => {
                   const dow = new Date(day.date + "T00:00:00").getDay();
                   const isSelected = selectedDate === day.date;
                   const isHoliday = !!day.holidayName || (dow === 0 && day.isCurrentMonth);
@@ -149,8 +149,15 @@ export function Calendar({
 
                   const singleEvts = day.events.filter((e) => !e.endDate || e.endDate <= e.date);
                   const visibleSingle = singleEvts.slice(0, 2);
-                  // 단일일 이벤트 중 표시 못한 개수만 +N으로 표시
                   const moreCount = singleEvts.length - visibleSingle.length;
+
+                  // 이 셀을 실제로 지나는 다중일 스팬이 있을 때만 스페이서 추가
+                  const localMaxLane = mdSpans
+                    .filter(s => s.startCol <= cellIdx && cellIdx <= s.endCol)
+                    .reduce((max, s) => Math.max(max, s.lane), -1);
+                  const cellReservedH = localMaxLane >= 0
+                    ? BAR_TOP + (localMaxLane + 1) * (BAR_H + BAR_GAP) - 28
+                    : 0;
 
                   const numColor = day.isToday
                     ? "#fff"
@@ -198,8 +205,8 @@ export function Calendar({
                         <span style={styles.sonTag}>손✕</span>
                       )}
 
-                      {/* 다중일 오버레이를 위한 예약 공간 */}
-                      {reservedH > 0 && <div style={{ height: reservedH, flexShrink: 0 }} />}
+                      {/* 다중일 오버레이를 위한 예약 공간 - 실제 스팬이 있는 셀에만 적용 */}
+                      {cellReservedH > 0 && <div style={{ height: cellReservedH, flexShrink: 0 }} />}
 
                       {day.isCurrentMonth && visibleSingle.map((evt) => (
                         <button
