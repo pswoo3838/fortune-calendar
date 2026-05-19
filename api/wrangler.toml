@@ -7,6 +7,6 @@ mode = "smart"
 
 [vars]
 OPENAI_MODEL = "gpt-4o-mini"
-# TODO: 프로덕션 배포 시 앱인토스 미니앱 도메인으로 교체
-# 예: ALLOWED_ORIGIN = "https://your-app.apps-in-toss.com"
-ALLOWED_ORIGIN = "http://localhost:5173"
+# 샌드박스/프로덕션 모두 허용 (CORS 와일드카드)
+# 특정 도메인만 허용하려면: ALLOWED_ORIGIN = "https://your-app.apps-in-toss.com"
+ALLOWED_ORIGIN = "*"

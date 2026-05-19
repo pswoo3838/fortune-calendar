@@ -14,18 +14,18 @@
 // 광고 그룹 ID
 // ──────────────────────────────────────────────
 // [운영 환경 광고 ID]
+/*
 const AD_GROUP = {
   INTERSTITIAL: "ait.v2.live.0f9946169c834168", // 전면형 광고
   BANNER: "ait.v2.live.f300e65722924e6d",       // 하단 배너 광고
 } as const;
+*/
 
 // [테스트/샌드박스 광고 ID - 필요 시 위의 AD_GROUP을 주석 처리하고 아래 주석을 해제하여 사용하세요]
-/*
 const AD_GROUP = {
   INTERSTITIAL: "ait-ad-test-interstitial-id", // 테스트 전면형 광고
   BANNER: "ait-ad-test-banner-id",             // 테스트 하단 배너 광고
 } as const;
-*/
 
 
 // ──────────────────────────────────────────────

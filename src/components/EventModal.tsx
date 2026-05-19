@@ -48,6 +48,34 @@ export function EventModal({ event, defaultDate, defaultTitle, defaultStartTime,
   const [allDay, setAllDay] = useState(event ? !event.startTime : false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  // 모달 body ref - 열릴 때 최상단으로 스크롤
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // iOS Safari 표준 body 스크롤 잠금 패턴
+    // 배경 페이지가 하단 탭 영역을 보여주는 현상 방지
+    const scrollY = window.scrollY;
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+
+    // 모달 내부도 최상단으로
+    requestAnimationFrame(() => {
+      if (bodyRef.current) {
+        bodyRef.current.scrollTop = 0;
+      }
+    });
+
+    return () => {
+      // 모달 닫힐 때 body 스크롤 복원
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
   // 스와이프 닫기
   const touchStartY = useRef(0);
   const onTouchStart = (e: React.TouchEvent) => { touchStartY.current = e.touches[0].clientY; };
@@ -112,7 +140,7 @@ export function EventModal({ event, defaultDate, defaultTitle, defaultStartTime,
           </button>
         </div>
 
-        <div style={styles.body}>
+        <div ref={bodyRef} style={styles.body}>
           {/* 제목 */}
           <input
             type="text"
@@ -120,7 +148,6 @@ export function EventModal({ event, defaultDate, defaultTitle, defaultStartTime,
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             style={styles.titleInput}
-            autoFocus
             maxLength={50}
           />
 
