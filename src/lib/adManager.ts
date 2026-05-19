@@ -142,9 +142,9 @@ export async function showFullScreenAd(): Promise<boolean> {
 
 // 무료 운세 카운터 (처음엔 바로 광고를 볼지, 1번은 무료로 할지 결정)
 // 앱 진입 시 최초 1회는 무료로 보게 해주고, 그 다음부터 광고를 띄우려면 초기값을 1 이상으로 설정합니다.
-// 대표님 요청에 따라 "한 번 보면 3~4개 패스"이므로, 
-// 초기값을 0으로 두면 첫 운세 클릭 시 광고 노출 -> 이후 3번 패스
-// 초기값을 3으로 두면 첫 3번 패스 -> 4번째에 광고 노출 -> 이후 3번 패스
+// 요청에 따라 "한 번 보면 1개 패스"이므로, 
+// 초기값을 0으로 두면 첫 운세 클릭 시 광고 노출 -> 이후 1번 패스
+// 초기값을 1로 두면 첫 1번 패스 -> 2번째에 광고 노출 -> 이후 1번 패스
 let _freeFortunesLeft = 0;
 
 /**
@@ -160,8 +160,8 @@ export async function showFortuneInterstitial(): Promise<boolean> {
   console.log("[Ad] 전면 광고 노출 시도...");
   const shown = await showFullScreenAd();
   
-  // 광고 노출을 시도했다면 (성공/실패/개발환경 무관) 다음 3회는 무료 패스
-  _freeFortunesLeft = 3;
+  // 광고 노출을 시도했다면 (성공/실패/개발환경 무관) 다음 1회는 무료 패스
+  _freeFortunesLeft = 1;
   return shown;
 }
 

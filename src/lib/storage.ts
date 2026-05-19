@@ -45,12 +45,12 @@ async function getNativeStorage(): Promise<StorageModule | null> {
 
   try {
     const fw = await import("@apps-in-toss/web-framework");
-    const fwAny = fw as any;
-    if (fwAny.getItem?.isSupported?.()) {
+    const fwTyped = fw as unknown as StorageModule & { getItem: { isSupported?: () => boolean } };
+    if (fwTyped.getItem?.isSupported?.()) {
       _nativeStorage = {
-        setItem: fwAny.setItem,
-        getItem: fwAny.getItem,
-        removeItem: fwAny.removeItem,
+        setItem: fwTyped.setItem,
+        getItem: fwTyped.getItem,
+        removeItem: fwTyped.removeItem,
       };
     }
   } catch {
