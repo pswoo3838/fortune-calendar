@@ -125,7 +125,7 @@ export function Calendar({
 
         const BAR_H = 14;
         const BAR_GAP = 2;
-        const BAR_TOP = 32;
+        const BAR_TOP = 40;   // cell 2px padding + 38px 날짜 헤더 = 40px
 
         return weeks.map((week, weekIdx) => {
           const mdSpans = getMultiDaySpans(week);
@@ -155,8 +155,9 @@ export function Calendar({
                   const localMaxLane = mdSpans
                     .filter(s => s.startCol <= cellIdx && cellIdx <= s.endCol)
                     .reduce((max, s) => Math.max(max, s.lane), -1);
+                  // 날짜 헤더 38px 고정이므로 spacer = lane 수 × bar 높이만
                   const cellReservedH = localMaxLane >= 0
-                    ? BAR_TOP + (localMaxLane + 1) * (BAR_H + BAR_GAP) - 28
+                    ? (localMaxLane + 1) * (BAR_H + BAR_GAP)
                     : 0;
 
                   const numColor = day.isToday
@@ -185,27 +186,27 @@ export function Calendar({
                         minHeight: `${80 + Math.max(0, reservedH)}px`,
                       }}
                     >
-                      <div style={{ ...styles.dateNumWrap, backgroundColor: bgColor }}>
-                        <span style={{ ...styles.dayNumber, color: numColor, fontWeight: day.isToday ? 800 : 500 }}>
-                          {dayNumber(day.date)}
-                        </span>
+                      {/* 날짜 헤더: 고정 38px = BAR_TOP(40) - cell padding(2) */}
+                      <div style={{ height: 38, flexShrink: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <div style={{ ...styles.dateNumWrap, backgroundColor: bgColor }}>
+                          <span style={{ ...styles.dayNumber, color: numColor, fontWeight: day.isToday ? 800 : 500 }}>
+                            {dayNumber(day.date)}
+                          </span>
+                        </div>
+                        {day.lunarLabel && day.isCurrentMonth && (
+                          <span style={styles.lunarLabel}>{day.lunarLabel.replace("음 ", "")}</span>
+                        )}
+                        {day.holidayName && day.isCurrentMonth && (
+                          <span style={styles.holidayLabel} title={day.holidayName}>
+                            {day.holidayName.length > 4 ? day.holidayName.slice(0, 4) + "…" : day.holidayName}
+                          </span>
+                        )}
+                        {day.isSonEomneun && !day.holidayName && day.isCurrentMonth && (
+                          <span style={styles.sonTag}>손✕</span>
+                        )}
                       </div>
 
-                      {day.lunarLabel && day.isCurrentMonth && (
-                        <span style={styles.lunarLabel}>{day.lunarLabel.replace("음 ", "")}</span>
-                      )}
-
-                      {day.holidayName && day.isCurrentMonth && (
-                        <span style={styles.holidayLabel} title={day.holidayName}>
-                          {day.holidayName.length > 4 ? day.holidayName.slice(0, 4) + "…" : day.holidayName}
-                        </span>
-                      )}
-
-                      {day.isSonEomneun && !day.holidayName && day.isCurrentMonth && (
-                        <span style={styles.sonTag}>손✕</span>
-                      )}
-
-                      {/* 다중일 오버레이를 위한 예약 공간 - 실제 스팬이 있는 셀에만 적용 */}
+                      {/* 다중일 오버레이 예약 공간 - 실제 스팬이 있는 셀에만 */}
                       {cellReservedH > 0 && <div style={{ height: cellReservedH, flexShrink: 0 }} />}
 
                       {day.isCurrentMonth && visibleSingle.map((evt) => (
