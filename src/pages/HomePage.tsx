@@ -17,7 +17,7 @@ import { LuckyDaysCard } from "../components/LuckyDaysCard";
 import { BannerAd } from "../components/BannerAd";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { BottomNav } from "../components/BottomNav";
-import { Top } from "@toss/tds-mobile";
+
 import { getZodiacEmoji } from "../lib/zodiac";
 import { today, tomorrow, minutesToTime } from "../lib/dateUtils";
 import type { CalendarEvent } from "../types/fortune";
@@ -155,10 +155,7 @@ export function HomePage() {
 
   return (
     <div style={styles.container}>
-      {/* 네비게이션 바 */}
-      <Top
-        title={<Top.TitleParagraph>포춘 캘린더</Top.TitleParagraph>}
-      />
+
 
       {/* 상단 인사말 */}
       <div style={styles.topBar}>

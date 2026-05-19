@@ -246,7 +246,7 @@ export function Calendar({
             </div>
 
             {day.events.length === 0 ? (
-              <p style={styles.noEvents}>등록된 일정이 없어요 — 길게 누르면 빠른 추가</p>
+              <p style={styles.noEvents}>등록된 일정이 없어요</p>
             ) : (
               <div style={styles.miniEventList}>
                 {day.events.map((evt) => (
