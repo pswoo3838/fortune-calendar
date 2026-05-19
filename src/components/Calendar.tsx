@@ -125,7 +125,7 @@ export function Calendar({
 
         const BAR_H = 14;
         const BAR_GAP = 2;
-        const BAR_TOP = 42;   // cell 2px padding + 40px 날짜 헤더 = 42px
+        const BAR_TOP = 46;   // cell 2px padding + 44px 날짜 헤더 = 46px
 
         return weeks.map((week, weekIdx) => {
           const mdSpans = getMultiDaySpans(week);
@@ -181,13 +181,14 @@ export function Calendar({
                       style={{
                         ...styles.dayCell,
                         opacity: day.isCurrentMonth ? 1 : 0.25,
-                        border: isSelected && !day.isToday ? "1.5px solid #6B4EFF" : "1.5px solid transparent",
+                        border: "none",
+                        boxShadow: isSelected && !day.isToday ? "inset 0 0 0 1.5px #6B4EFF" : "none",
                         cursor: day.isCurrentMonth ? "pointer" : "default",
                         minHeight: `${80 + Math.max(0, reservedH)}px`,
                       }}
                     >
-                      {/* 날짜 헤더: 고정 38px = BAR_TOP(40) - cell padding(2) */}
-                      <div style={{ height: 40, flexShrink: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      {/* 날짜 헤더: 고정 44px = BAR_TOP(46) - cell padding(2) */}
+                      <div style={{ height: 44, flexShrink: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
                         <div style={{ ...styles.dateNumWrap, backgroundColor: bgColor }}>
                           <span style={{ ...styles.dayNumber, color: numColor, fontWeight: day.isToday ? 800 : 500 }}>
                             {dayNumber(day.date)}
@@ -372,7 +373,7 @@ const styles: Record<string, CSSProperties> = {
   dateNumWrap: {
     width: "26px", height: "26px", borderRadius: "50%",
     display: "flex", alignItems: "center", justifyContent: "center",
-    margin: "2px auto 3px",
+    margin: "4px auto 3px",
     flexShrink: 0,
   },
   dayNumber: { fontSize: "13px" },
@@ -388,7 +389,7 @@ const styles: Record<string, CSSProperties> = {
     textAlign: "left",
     flexShrink: 0,
     overflow: "hidden",
-    marginTop: "1px",   /* gap 대신 개별 마진으로 간격 */
+    marginTop: "2px",   /* 다중일 이벤트의 BAR_GAP(2px)과 동일한 간격 */
   },
   eventBarText: { fontSize: "9px", fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" },
   moreLabel: { fontSize: "8px", color: "#8B95A1", textAlign: "center", paddingTop: "1px" },
