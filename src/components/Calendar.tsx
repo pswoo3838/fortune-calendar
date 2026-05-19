@@ -125,7 +125,7 @@ export function Calendar({
 
         const BAR_H = 14;
         const BAR_GAP = 2;
-        const BAR_TOP = 40;   // cell 2px padding + 38px 날짜 헤더 = 40px
+        const BAR_TOP = 42;   // cell 2px padding + 40px 날짜 헤더 = 42px
 
         return weeks.map((week, weekIdx) => {
           const mdSpans = getMultiDaySpans(week);
@@ -187,7 +187,7 @@ export function Calendar({
                       }}
                     >
                       {/* 날짜 헤더: 고정 38px = BAR_TOP(40) - cell padding(2) */}
-                      <div style={{ height: 38, flexShrink: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      <div style={{ height: 40, flexShrink: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
                         <div style={{ ...styles.dateNumWrap, backgroundColor: bgColor }}>
                           <span style={{ ...styles.dayNumber, color: numColor, fontWeight: day.isToday ? 800 : 500 }}>
                             {dayNumber(day.date)}
@@ -372,7 +372,7 @@ const styles: Record<string, CSSProperties> = {
   dateNumWrap: {
     width: "26px", height: "26px", borderRadius: "50%",
     display: "flex", alignItems: "center", justifyContent: "center",
-    margin: "2px auto 1px",
+    margin: "2px auto 3px",
     flexShrink: 0,
   },
   dayNumber: { fontSize: "13px" },
