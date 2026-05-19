@@ -148,17 +148,51 @@ export function Calendar({
               )}
 
               {/* 이벤트 바 */}
-              {day.isCurrentMonth && visibleEvents.map((evt) => (
-                <button
-                  key={evt.id}
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onEventClick(evt); }}
-                  style={{ ...styles.eventBar, backgroundColor: evt.color }}
-                  title={evt.title}
-                >
-                  <span style={styles.eventBarText}>{evt.title}</span>
-                </button>
-              ))}
+              {day.isCurrentMonth && visibleEvents.map((evt) => {
+                const evtEnd = evt.endDate || evt.date;
+                const isMultiDay = evtEnd > evt.date;
+
+                // 주 행 경계: 일(0) = 주 시작, 토(6) = 주 끝
+                // 이전 날과 연결: 오늘이 이벤트 시작일이 아니고 주 시작일(일)이 아닐 때
+                const spanLeft = isMultiDay && evt.date < day.date && dow !== 0;
+                // 다음 날과 연결: 이벤트가 오늘 이후에도 계속되고 주 끝(토)이 아닐 때
+                const spanRight = isMultiDay && evtEnd > day.date && dow !== 6;
+
+                // 왼쪽으로 넓힐 양(셀 왼쪽 패딩 2px), 오른쪽으로 넓힐 양(패딩 2px + 격자 간격 1px)
+                const extL = spanLeft ? 2 : 0;
+                const extR = spanRight ? 3 : 0;
+
+                return (
+                  <button
+                    key={evt.id}
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onEventClick(evt); }}
+                    style={{
+                      ...styles.eventBar,
+                      backgroundColor: evt.color,
+                      // 연결 방향에 따라 모서리 둥글기 제거
+                      borderTopLeftRadius: spanLeft ? 0 : 3,
+                      borderBottomLeftRadius: spanLeft ? 0 : 3,
+                      borderTopRightRadius: spanRight ? 0 : 3,
+                      borderBottomRightRadius: spanRight ? 0 : 3,
+                      // 셀 패딩/간격을 음수 마진으로 메워 시각적으로 연결
+                      ...(extL > 0 || extR > 0 ? {
+                        marginLeft: `-${extL}px`,
+                        width: `calc(100% + ${extL + extR}px)`,
+                        position: "relative",
+                        zIndex: 2,
+                      } : {}),
+                    }}
+                    title={evt.title}
+                  >
+                    {/* 연속 셀에서는 제목 숨김, 첫 날만 표시 */}
+                    <span style={{ ...styles.eventBarText, visibility: spanLeft ? "hidden" : "visible" }}>
+                      {evt.title}
+                    </span>
+                  </button>
+                );
+              })}
+
 
               {/* +N개 더 */}
               {moreCount > 0 && day.isCurrentMonth && (
