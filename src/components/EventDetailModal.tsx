@@ -98,10 +98,10 @@ export function EventDetailModal({ event, onEdit, onDelete, onClose }: EventDeta
 
         {/* 정보 목록 */}
         <div style={styles.infoList}>
-          <InfoRow icon="📅" label={dateDesc()} />
-          <InfoRow icon="⏰" label={timeDesc()} />
-          {repeatDesc() && <InfoRow icon="🔁" label={repeatDesc()!} />}
-          {event.memo && <InfoRow icon="📝" label={event.memo} isMultiline />}
+          <InfoRow label="날짜" value={dateDesc()} />
+          <InfoRow label="시간" value={timeDesc()} />
+          {repeatDesc() && <InfoRow label="반복" value={repeatDesc()!} />}
+          {event.memo && <InfoRow label="메모" value={event.memo} isMultiline />}
         </div>
 
         {/* 액션 버튼 */}
@@ -140,11 +140,11 @@ export function EventDetailModal({ event, onEdit, onDelete, onClose }: EventDeta
   );
 }
 
-function InfoRow({ icon, label, isMultiline }: { icon: string; label: string; isMultiline?: boolean }) {
+function InfoRow({ label, value, isMultiline }: { label: string; value: string; isMultiline?: boolean }) {
   return (
     <div style={{ display: "flex", gap: "12px", alignItems: isMultiline ? "flex-start" : "center", padding: "10px 0", borderBottom: "1px solid #F2F4F6" }}>
-      <span style={{ fontSize: "18px", flexShrink: 0, marginTop: isMultiline ? "2px" : 0 }}>{icon}</span>
-      <span style={{ fontSize: "15px", color: "#333D4B", lineHeight: 1.5 }}>{label}</span>
+      <span style={{ fontSize: "12px", fontWeight: 700, color: "#8B95A1", flexShrink: 0, minWidth: "28px", marginTop: isMultiline ? "2px" : 0 }}>{label}</span>
+      <span style={{ fontSize: "15px", color: "#333D4B", lineHeight: 1.5 }}>{value}</span>
     </div>
   );
 }

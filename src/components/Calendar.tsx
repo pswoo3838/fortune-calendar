@@ -256,7 +256,7 @@ export function Calendar({
                 return (
                   <div
                     key={`${span.event.id}-w${weekIdx}`}
-                    onClick={(e) => { e.stopPropagation(); onEventClick(span.event); }}
+                    onClick={(e) => { e.stopPropagation(); const d = week[span.startCol]; if (d) handleDayClick(d); }}
                     style={{
                       position: "absolute",
                       left: `calc(${leftPct}% + 3px)`,
