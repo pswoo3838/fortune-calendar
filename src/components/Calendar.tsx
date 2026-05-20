@@ -10,9 +10,10 @@ interface CalendarProps {
   onNextMonth: () => void;
   onToday: () => void;
   onRequestFortune: (date: string) => void;
-  onDaySelect: (date: string) => void;
+  onDaySelect: (date: string | null) => void;
   onAddEvent: (date: string) => void;
   onEventClick: (event: CalendarEvent) => void;
+  selectedDate: string | null;
 }
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -21,8 +22,8 @@ export function Calendar({
   monthLabel, calendarDays,
   onPrevMonth, onNextMonth, onToday,
   onRequestFortune, onDaySelect, onAddEvent, onEventClick,
+  selectedDate,
 }: CalendarProps) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const tomorrowDate = tomorrowFn();
   const selectedPanelRef = useRef<HTMLDivElement>(null);
 
@@ -38,9 +39,8 @@ export function Calendar({
   const handleDayClick = (day: CalendarDayData) => {
     if (!day.isCurrentMonth) return;
     if (selectedDate === day.date) {
-      setSelectedDate(null);
+      onDaySelect(null);
     } else {
-      setSelectedDate(day.date);
       onDaySelect(day.date);
     }
   };
@@ -51,9 +51,9 @@ export function Calendar({
     <div style={styles.wrapper}>
       {/* 헤더 */}
       <div style={styles.header}>
-        <button type="button" onClick={() => { setSelectedDate(null); onPrevMonth(); }} style={styles.navButton}>◀</button>
+        <button type="button" onClick={() => { onDaySelect(null); onPrevMonth(); }} style={styles.navButton}>◀</button>
         <button type="button" onClick={onToday} style={styles.monthLabel}>{monthLabel}</button>
-        <button type="button" onClick={() => { setSelectedDate(null); onNextMonth(); }} style={styles.navButton}>▶</button>
+        <button type="button" onClick={() => { onDaySelect(null); onNextMonth(); }} style={styles.navButton}>▶</button>
       </div>
 
       {/* 요일 헤더 */}

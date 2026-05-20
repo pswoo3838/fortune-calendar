@@ -43,6 +43,20 @@ export function LuckyDaysCard({ profile, onClose }: LuckyDaysCardProps) {
         const month = now.getMonth() + 1;
         const daysInMonth = new Date(year, month, 0).getDate();
 
+        // 1. 로컬 캐시 조회
+        const cacheKey = `fortune_lucky_days_${profile.zodiac}_${year}_${month}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached) as LuckyDay[];
+            setLuckyDays(parsed);
+            setIsLoading(false);
+            return;
+          } catch (e) {
+            console.warn("[LuckyDays] 캐시 파싱 에러:", e);
+          }
+        }
+
         const WORKER_URL =
           (import.meta.env.VITE_WORKER_URL as string | undefined) ||
           "http://localhost:8787";
@@ -74,6 +88,13 @@ export function LuckyDaysCard({ profile, onClose }: LuckyDaysCardProps) {
             return (gradeOrder[a.grade] ?? 2) - (gradeOrder[b.grade] ?? 2);
           })
           .slice(0, 10);
+
+        // 2. 로컬 캐시에 저장
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(good));
+        } catch (e) {
+          console.warn("[LuckyDays] 캐시 저장 실패:", e);
+        }
 
         setLuckyDays(good);
       } catch (err) {

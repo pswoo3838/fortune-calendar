@@ -52,6 +52,9 @@ export function HomePage() {
   const [modalDefaultStartTime, setModalDefaultStartTime] = useState<string | undefined>(undefined);
   const [modalDefaultEndTime, setModalDefaultEndTime] = useState<string | undefined>(undefined);
 
+  // ── 선택 날짜 (FAB에서 사용) ──
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
   // ── 운세 상태 ──
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const [showLuckyDays, setShowLuckyDays] = useState(false);
@@ -72,12 +75,12 @@ export function HomePage() {
     if (evt) setReturnToDetail(evt); // 기존 일정 수정 → 닫으면 상세로
     else setReturnToDetail(null);
     setEditingEvent(evt ?? null);
-    setModalDefaultDate(date ?? today());
+    setModalDefaultDate(date ?? selectedDate ?? today());
     setModalDefaultTitle(title);
     setModalDefaultStartTime(startTime);
     setModalDefaultEndTime(endTime);
     setEditModalOpen(true);
-  }, []);
+  }, [selectedDate]);
 
   // 수정 모달 닫기 → 상세로 복귀
   const handleEditModalClose = useCallback(() => {
@@ -112,8 +115,11 @@ export function HomePage() {
     setReturnToDetail(null);
   }, [editingEvent, addEvent, updateEvent]);
 
-  const handleDaySelect = useCallback((date: string) => {
-    syncToDate(date);
+  const handleDaySelect = useCallback((date: string | null) => {
+    if (date) {
+      syncToDate(date);
+    }
+    setSelectedDate(date);
     setShowLuckyDays(false);
   }, [syncToDate]);
 
@@ -129,8 +135,18 @@ export function HomePage() {
     if (!profile) return;
     setLuckyDaysLoading(true);
     try {
-      const { showFullScreenAd } = await import("../lib/adManager");
-      await showFullScreenAd();
+      // 이번 달 광고를 이미 봤는지 확인 (YYYY-MM 형식)
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const adMonth = localStorage.getItem("luckyDays_adMonth");
+
+      if (adMonth !== currentMonth) {
+        // 이번 달 처음 → 광고 표시
+        const { showFullScreenAd } = await import("../lib/adManager");
+        await showFullScreenAd();
+        localStorage.setItem("luckyDays_adMonth", currentMonth);
+      }
+
       setActiveDate(null);
       setShowLuckyDays(true);
     } finally {
@@ -190,6 +206,7 @@ export function HomePage() {
             onDaySelect={handleDaySelect}
             onAddEvent={handleAddEvent}
             onEventClick={openDetailModal}
+            selectedDate={selectedDate}
           />
 
           {!showLuckyDays && !isDailyLoading && (
@@ -269,7 +286,7 @@ export function HomePage() {
           type="button"
           id="fab-add-event"
           style={styles.fab}
-          onClick={() => openEditModal()}
+          onClick={() => openEditModal(undefined, selectedDate)}
           aria-label="일정 추가"
         >
           +

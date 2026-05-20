@@ -86,16 +86,16 @@ export function useFortune(profile: UserProfile | null): UseFortuneReturn {
       setIsDailyLoading(true);
 
       try {
-        // 전면 광고 표시 (빈도 조절 적용: 처음엔 무조건 뜨고 이후 3번 패스)
-        await showFortuneInterstitial();
-
-        // 캐시에서 가져오기 시도
+        // 1. 캐시에서 가져오기 시도 (이미 본 운세는 광고 없이 로드)
         const cached = await loadCachedDailyFortune(targetDate, profile);
         if (cached) {
           setter(cached);
           void addUnlockedDate(targetDate);
           return;
         }
+
+        // 2. 캐시 없으면 광고 표시 (빈도 조절 적용)
+        await showFortuneInterstitial();
 
         // 캐시 없음 → 새로 생성
         const weeklyFortune = await getWeeklyFortune(profile);

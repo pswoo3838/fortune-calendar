@@ -8,10 +8,10 @@ export default defineConfig({
     icon: "https://static.toss.im/appsintoss/37061/2d8c7b49-800b-42ee-a658-59baef89b41b.png",
   },
   web: {
-    host: "172.30.1.44",
+    host: "172.30.1.46",
     port: 5173,
     commands: {
-      dev: "vite dev --host 172.30.1.44",
+      dev: "vite dev --host 172.30.1.46",
       build: "vite build",
     },
   },
