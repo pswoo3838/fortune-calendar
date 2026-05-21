@@ -166,12 +166,45 @@ export async function showFortuneInterstitial(): Promise<boolean> {
     return true;
   }
 
+  const fw = await getFramework();
+  const isAdSupported = !!(fw?.showFullScreenAd?.isSupported?.());
+
   console.log("[Ad] 전면 광고 노출 시도...");
   const shown = await showFullScreenAd();
   
-  // 광고 노출을 시도했다면 (성공/실패/개발환경 무관) 다음 1회는 무료 패스
-  _freeFortunesLeft = 1;
-  return shown;
+  if (isAdSupported) {
+    if (shown) {
+      _freeFortunesLeft = 1; // 광고를 완전히 다 보았을 때만 다음 1회 무료 패스 지급
+      return true;
+    } else {
+      _freeFortunesLeft = 0; // 광고가 실패했거나 스킵/종료되면 무료 패스 없음
+      return false;
+    }
+  } else {
+    // 광고 SDK 미지원 개발 환경인 경우 테스트 편의상 완시로 시뮬레이션
+    console.log("[Ad] 개발 환경 시뮬레이션: 광고 성공 처리 (무료 패스 지급)");
+    _freeFortunesLeft = 1;
+    return true;
+  }
+}
+
+/**
+ * 행운의 날 전용 전면 광고 호출 함수
+ */
+export async function showLuckyDaysAd(): Promise<boolean> {
+  const fw = await getFramework();
+  const isAdSupported = !!(fw?.showFullScreenAd?.isSupported?.());
+
+  console.log("[Ad] 행운의 날 전면 광고 노출 시도...");
+  const shown = await showFullScreenAd();
+
+  if (isAdSupported) {
+    return shown;
+  } else {
+    // 광고 SDK 미지원 개발 환경인 경우 테스트 편의상 완시로 시뮬레이션
+    console.log("[Ad] 개발 환경 시뮬레이션: 행운의 날 광고 성공 처리");
+    return true;
+  }
 }
 
 /**

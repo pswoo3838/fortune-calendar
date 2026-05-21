@@ -95,7 +95,10 @@ export function useFortune(profile: UserProfile | null): UseFortuneReturn {
         }
 
         // 2. 캐시 없으면 광고 표시 (빈도 조절 적용)
-        await showFortuneInterstitial();
+        const adShown = await showFortuneInterstitial();
+        if (!adShown) {
+          throw new Error("AD_CANCELLED");
+        }
 
         // 캐시 없음 → 새로 생성
         const weeklyFortune = await getWeeklyFortune(profile);
@@ -104,7 +107,11 @@ export function useFortune(profile: UserProfile | null): UseFortuneReturn {
         void addUnlockedDate(targetDate);
       } catch (err) {
         console.error("운세 조회 실패:", err);
-        setDailyError("운세를 불러오지 못했습니다. 다시 시도해주세요.");
+        if (err instanceof Error && err.message === "AD_CANCELLED") {
+          setDailyError("광고를 끝까지 시청해야 운세를 볼 수 있습니다.");
+        } else {
+          setDailyError("운세를 불러오지 못했습니다. 다시 시도해주세요.");
+        }
       } finally {
         setIsDailyLoading(false);
       }

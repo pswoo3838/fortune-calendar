@@ -142,8 +142,12 @@ export function HomePage() {
 
       if (adMonth !== currentMonth) {
         // 이번 달 처음 → 광고 표시
-        const { showFullScreenAd } = await import("../lib/adManager");
-        await showFullScreenAd();
+        const { showLuckyDaysAd } = await import("../lib/adManager");
+        const adShown = await showLuckyDaysAd();
+        if (!adShown) {
+          alert("광고를 끝까지 시청해야 이번 달 행운의 날을 볼 수 있습니다.");
+          return;
+        }
         localStorage.setItem("luckyDays_adMonth", currentMonth);
       }
 
