@@ -1,6 +1,6 @@
 import type { AIFortuneRequest, AIFortuneResponse, DailyFortune } from "../types/fortune";
 
-const WORKER_URL = import.meta.env.VITE_WORKER_URL || "http://localhost:8787";
+const WORKER_URL = import.meta.env.VITE_WORKER_URL || "https://fortune-worker.siuda3838.workers.dev";
 
 /**
  * Cloudflare Worker에 주간 운세 생성 요청

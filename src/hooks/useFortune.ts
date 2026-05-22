@@ -111,7 +111,8 @@ export function useFortune(profile: UserProfile | null): UseFortuneReturn {
         if (err instanceof Error && err.message === "AD_CANCELLED") {
           setDailyError("광고를 끝까지 시청해야 운세를 볼 수 있습니다.");
         } else {
-          setDailyError("운세를 불러오지 못했습니다. 다시 시도해주세요.");
+          const errMsg = err instanceof Error ? err.message : String(err);
+          setDailyError(`운세를 불러오지 못했습니다. 다시 시도해주세요. (${errMsg})`);
         }
       } finally {
         setIsDailyLoading(false);
@@ -188,7 +189,8 @@ export function useFortune(profile: UserProfile | null): UseFortuneReturn {
         setMonthlyFortune(fortune);
       } catch (err) {
         console.error("월간 운세 조회 실패:", err);
-        setMonthlyError("한달 운세를 불러오지 못했습니다.");
+        const errMsg = err instanceof Error ? err.message : String(err);
+        setMonthlyError(`한달 운세를 불러오지 못했습니다. (${errMsg})`);
       } finally {
         setIsMonthlyLoading(false);
       }
