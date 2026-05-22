@@ -60,6 +60,7 @@ export function HomePage() {
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const [showLuckyDays, setShowLuckyDays] = useState(false);
   const [luckyDaysLoading, setLuckyDaysLoading] = useState(false);
+  const [shouldScrollToFortune, setShouldScrollToFortune] = useState(false);
 
 
   // 상세 모달 열기
@@ -123,6 +124,7 @@ export function HomePage() {
     }
     setSelectedDate(date);
     setShowLuckyDays(false);
+    setShouldScrollToFortune(false); // 단순 날짜 선택 시에는 스크롤 안 함
 
     if (date) {
       const cached = await checkAndLoadCachedFortune(date);
@@ -139,6 +141,7 @@ export function HomePage() {
   const handleRequestFortune = useCallback(async (date: string) => {
     setActiveDate(date);
     setShowLuckyDays(false);
+    setShouldScrollToFortune(true); // 운세 명시적 보기 클릭 시에만 스크롤 활성화
     if (date === today()) await requestTodayFortune();
     else if (date === tomorrow()) await requestTomorrowFortune();
     else { clearSpecificFortune(); await requestSpecificFortune(date); }
@@ -180,13 +183,14 @@ export function HomePage() {
   const fortuneAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (visibleFortune && !isDailyLoading) {
+    if (visibleFortune && !isDailyLoading && shouldScrollToFortune) {
       const timer = setTimeout(() => {
         fortuneAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setShouldScrollToFortune(false); // 스크롤 수행 후 플래그 해제
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [visibleFortune, isDailyLoading]);
+  }, [visibleFortune, isDailyLoading, shouldScrollToFortune]);
 
   const visibleLabel =
     activeDate === today() ? "오늘의 운세" :
