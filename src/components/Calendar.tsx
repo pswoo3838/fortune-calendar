@@ -27,14 +27,7 @@ export function Calendar({
   const tomorrowDate = tomorrowFn();
   const selectedPanelRef = useRef<HTMLDivElement>(null);
 
-  // 날짜 선택 시 선택 패널이 보이도록 스크롤
-  useEffect(() => {
-    if (selectedDate && selectedPanelRef.current) {
-      setTimeout(() => {
-        selectedPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 80);
-    }
-  }, [selectedDate]);
+
 
   const handleDayClick = (day: CalendarDayData) => {
     if (!day.isCurrentMonth) return;
