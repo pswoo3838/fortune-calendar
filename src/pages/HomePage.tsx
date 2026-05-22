@@ -61,17 +61,6 @@ export function HomePage() {
   const [showLuckyDays, setShowLuckyDays] = useState(false);
   const [luckyDaysLoading, setLuckyDaysLoading] = useState(false);
 
-  // 운세 로드 후 스크롤을 위한 Ref 및 Effect
-  const fortuneAreaRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (visibleFortune && !isDailyLoading) {
-      const timer = setTimeout(() => {
-        fortuneAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [visibleFortune, isDailyLoading]);
 
   // 상세 모달 열기
   const openDetailModal = useCallback((evt: CalendarEvent) => {
@@ -186,6 +175,18 @@ export function HomePage() {
     activeDate === today() ? todayFortune :
     activeDate === tomorrow() ? tomorrowFortune :
     activeDate ? specificFortune : null;
+
+  // 운세 로드 후 스크롤을 위한 Ref 및 Effect
+  const fortuneAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (visibleFortune && !isDailyLoading) {
+      const timer = setTimeout(() => {
+        fortuneAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [visibleFortune, isDailyLoading]);
 
   const visibleLabel =
     activeDate === today() ? "오늘의 운세" :
