@@ -24,6 +24,7 @@ interface UseFortuneReturn {
   requestSpecificFortune: (date: string) => Promise<void>;
   requestMonthlyFortune: (year: number, month: number) => Promise<void>;
   clearSpecificFortune: () => void;
+  checkAndLoadCachedFortune: (date: string | null) => Promise<DailyFortune | null>;
 }
 
 async function loadCachedDailyFortune(
@@ -135,6 +136,35 @@ export function useFortune(profile: UserProfile | null): UseFortuneReturn {
     setSpecificFortune(null);
   }, []);
 
+  const checkAndLoadCachedFortune = useCallback(
+    async (date: string | null): Promise<DailyFortune | null> => {
+      if (!profile) return null;
+      if (!date) {
+        setSpecificFortune(null);
+        return null;
+      }
+
+      const cached = await loadCachedDailyFortune(date, profile);
+      if (cached) {
+        if (date === today()) {
+          setTodayFortune(cached);
+        } else if (date === tomorrow()) {
+          setTomorrowFortune(cached);
+        } else {
+          setSpecificFortune(cached);
+        }
+        return cached;
+      } else {
+        // 캐시가 없으면 기존 특정 날짜 운세 상태 비우기 (오늘/내일이 아닐 때만)
+        if (date !== today() && date !== tomorrow()) {
+          setSpecificFortune(null);
+        }
+        return null;
+      }
+    },
+    [profile]
+  );
+
   const requestMonthlyFortune = useCallback(
     async (year: number, month: number) => {
       if (!profile) return;
@@ -180,5 +210,6 @@ export function useFortune(profile: UserProfile | null): UseFortuneReturn {
     requestSpecificFortune,
     requestMonthlyFortune,
     clearSpecificFortune,
+    checkAndLoadCachedFortune,
   };
 }

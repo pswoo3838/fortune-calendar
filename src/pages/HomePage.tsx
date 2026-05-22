@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { CSSProperties } from "react";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { useCalendar } from "../hooks/useCalendar";
@@ -29,6 +29,7 @@ export function HomePage() {
     todayFortune, tomorrowFortune, specificFortune,
     isDailyLoading, dailyError,
     requestTodayFortune, requestTomorrowFortune, requestSpecificFortune, clearSpecificFortune,
+    checkAndLoadCachedFortune,
   } = useFortune(profile);
 
   const { events, addEvent, updateEvent, removeEvent, getDdayEvents } = useCalendarEvents();
@@ -59,6 +60,18 @@ export function HomePage() {
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const [showLuckyDays, setShowLuckyDays] = useState(false);
   const [luckyDaysLoading, setLuckyDaysLoading] = useState(false);
+
+  // 운세 로드 후 스크롤을 위한 Ref 및 Effect
+  const fortuneAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (visibleFortune && !isDailyLoading) {
+      const timer = setTimeout(() => {
+        fortuneAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [visibleFortune, isDailyLoading]);
 
   // 상세 모달 열기
   const openDetailModal = useCallback((evt: CalendarEvent) => {
@@ -115,13 +128,24 @@ export function HomePage() {
     setReturnToDetail(null);
   }, [editingEvent, addEvent, updateEvent]);
 
-  const handleDaySelect = useCallback((date: string | null) => {
+  const handleDaySelect = useCallback(async (date: string | null) => {
     if (date) {
       syncToDate(date);
     }
     setSelectedDate(date);
     setShowLuckyDays(false);
-  }, [syncToDate]);
+
+    if (date) {
+      const cached = await checkAndLoadCachedFortune(date);
+      if (cached) {
+        setActiveDate(date);
+      } else {
+        setActiveDate(null);
+      }
+    } else {
+      setActiveDate(null);
+    }
+  }, [syncToDate, checkAndLoadCachedFortune]);
 
   const handleRequestFortune = useCallback(async (date: string) => {
     setActiveDate(date);
@@ -237,7 +261,7 @@ export function HomePage() {
           )}
 
           {visibleFortune && !isDailyLoading && (
-            <div style={styles.fortuneArea}>
+            <div ref={fortuneAreaRef} style={styles.fortuneArea}>
               <FortuneCard fortune={visibleFortune} label={visibleLabel} />
             </div>
           )}
