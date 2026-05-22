@@ -46,6 +46,31 @@ async function getFramework(): Promise<FrameworkModule | null> {
 }
 
 // ──────────────────────────────────────────────
+// 안전한 SDK 지원 판단 헬퍼 (Toss Web Bridge 오류 방어)
+// ──────────────────────────────────────────────
+function safeIsAdSupported(fw: any): boolean {
+  try {
+    if (typeof fw?.showFullScreenAd?.isSupported === "function") {
+      return !!fw.showFullScreenAd.isSupported();
+    }
+  } catch (e) {
+    console.warn("[Ad] showFullScreenAd.isSupported 체크 실패 (미지원 간주):", e);
+  }
+  return false;
+}
+
+function safeIsLoadAdSupported(fw: any): boolean {
+  try {
+    if (typeof fw?.loadFullScreenAd?.isSupported === "function") {
+      return !!fw.loadFullScreenAd.isSupported();
+    }
+  } catch (e) {
+    console.warn("[Ad] loadFullScreenAd.isSupported 체크 실패 (미지원 간주):", e);
+  }
+  return false;
+}
+
+// ──────────────────────────────────────────────
 // 전면형 광고 (Interstitial)
 // ──────────────────────────────────────────────
 let _adLoaded = false;
@@ -58,13 +83,8 @@ let _loadUnregister: (() => void) | null = null;
  */
 export async function preloadFullScreenAd(): Promise<void> {
   const fw = await getFramework();
-  try {
-    if (!fw?.loadFullScreenAd?.isSupported?.()) {
-      console.log("[Ad] 전면 광고 미지원 환경");
-      return;
-    }
-  } catch {
-    console.log("[Ad] 전면 광고 SDK 환경 아님 (개발 환경)");
+  if (!safeIsLoadAdSupported(fw)) {
+    console.log("[Ad] 전면 광고 미지원 환경");
     return;
   }
 
@@ -101,7 +121,7 @@ export async function showFullScreenAd(): Promise<boolean> {
   }
 
   const fw = await getFramework();
-  if (!fw?.showFullScreenAd?.isSupported?.()) return false;
+  if (!safeIsAdSupported(fw)) return false;
 
   return new Promise<boolean>((resolve) => {
     let settled = false;
@@ -167,7 +187,7 @@ export async function showFortuneInterstitial(): Promise<boolean> {
   }
 
   const fw = await getFramework();
-  const isAdSupported = !!(fw?.showFullScreenAd?.isSupported?.());
+  const isAdSupported = safeIsAdSupported(fw);
 
   console.log("[Ad] 전면 광고 노출 시도...");
   const shown = await showFullScreenAd();
@@ -193,7 +213,7 @@ export async function showFortuneInterstitial(): Promise<boolean> {
  */
 export async function showLuckyDaysAd(): Promise<boolean> {
   const fw = await getFramework();
-  const isAdSupported = !!(fw?.showFullScreenAd?.isSupported?.());
+  const isAdSupported = safeIsAdSupported(fw);
 
   console.log("[Ad] 행운의 날 전면 광고 노출 시도...");
   const shown = await showFullScreenAd();
