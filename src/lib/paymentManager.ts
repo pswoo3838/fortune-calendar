@@ -56,36 +56,27 @@ export function requestMonthlySajuWithPayment(
         throw new Error("IAP SDK not available in this environment");
       }
 
-      // 사주 생성 결과를 processProductGrant 밖으로 전달하기 위한 변수
+      // 사주 생성 결과를 processProductGrant 밖으로 전달하기 위한 변수 및 병렬 시동
       let generatedReport: MonthlySajuReport | null = null;
+      const reportPromise = getMonthlySajuReport(profile, year, month)
+        .then((rep) => { generatedReport = rep; return rep; })
+        .catch(() => null);
 
       const cleanup = IAP.createOneTimePurchaseOrder({
         options: {
           sku: MONTHLY_SAJU_SKU,
           /**
            * ★ 결제 성공 후 앱인토스가 호출하는 상품 지급 콜백
-           *
-           * 여기서 사주 API를 호출합니다.
-           * - true 반환 → 지급 완료, 결제 확정
-           * - false 반환 → 지급 실패, 앱인토스가 자동 환불
+           * 토스 SDK 타임아웃 방지를 위해 즉시 true 반환
            */
           processProductGrant: async ({ orderId }: { orderId: string }) => {
-            console.log("[IAP] processProductGrant 시작, orderId:", orderId);
+            console.log("[IAP] processProductGrant 즉시 승인, orderId:", orderId);
             try {
-              generatedReport = await getMonthlySajuReport(profile, year, month);
-              console.log("[IAP] 사주 생성 성공 → completeProductGrant 호출 (결제 확정)");
               if (typeof IAP.completeProductGrant === "function") {
-                try {
-                  await IAP.completeProductGrant({ orderId });
-                } catch (e) {
-                  console.warn("[IAP] completeProductGrant 호출 경고:", e);
-                }
+                IAP.completeProductGrant({ orderId }).catch(() => {});
               }
-              return true;
-            } catch (err) {
-              console.error("[IAP] 사주 생성 실패 → false 반환 (자동 환불)", err);
-              return false; // ← 이렇게 하면 앱인토스가 자동으로 환불합니다
-            }
+            } catch (e) {}
+            return true;
           },
         },
         onEvent: (event: any) => {
@@ -97,12 +88,15 @@ export function requestMonthlySajuWithPayment(
             if (orderId && typeof IAP.completeProductGrant === "function") {
               IAP.completeProductGrant({ orderId }).catch(() => {});
             }
-            if (generatedReport) {
-              resolve({ success: true, report: generatedReport });
-            } else {
-              // processProductGrant에서 true를 반환했는데 report가 없는 경우
-              resolve({ success: false, error: "운세 데이터가 생성되었으나 로드에 실패했습니다." });
-            }
+
+            void reportPromise.then((rep) => {
+              const finalReport = rep || generatedReport;
+              if (finalReport) {
+                resolve({ success: true, report: finalReport });
+              } else {
+                resolve({ success: false, error: "운세 데이터가 생성되었으나 로드에 실패했습니다." });
+              }
+            });
           } else if (event.type === "grantFailed") {
             // processProductGrant에서 false를 반환한 경우 — 자동 환불됨
             cleanup?.();
