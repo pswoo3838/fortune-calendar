@@ -231,7 +231,7 @@ function buildClientFallbackReport(
   const birthTime = profile.birthTime || "모름";
   const saju = calculateSaju(profile.birthDate, birthTime);
   const monthGeon = getMonthGeon(year, month);
-  const ohengLucky = getOhengLucky(saju.weakElement);
+  const ohengLucky = getOhengLucky(saju.weakElement, year, month);
 
   const mData = MONTHLY_SAJU_VARIATIONS[month] || MONTHLY_SAJU_VARIATIONS[9];
 
@@ -294,7 +294,7 @@ function buildClientFallbackReport(
       luckyColor: ohengLucky.luckyColor,
       luckyDirection: ohengLucky.luckyDirection,
       luckyNumber: ohengLucky.luckyNumber,
-      luckyItem: "허브 계열의 향초 또는 우디향이 배어 있는 천연 소재 핸드크림",
+      luckyItem: ohengLucky.luckyItem,
       avoidAction: mData.avoidAction,
       bestDays: bestDays.length > 0 ? bestDays : [`${year}-${String(month).padStart(2, "0")}-07`, `${year}-${String(month).padStart(2, "0")}-18`],
     },
@@ -348,6 +348,9 @@ export async function getMonthlySajuReport(
   const luckyDays = await getOrFetchLuckyDays(profile, year, month);
   const bestDays = luckyDays.slice(0, 3).map((d) => d.date);
 
+  const saju = calculateSaju(profile.birthDate, profile.birthTime || "모름");
+  const ohengLucky = getOhengLucky(saju.weakElement, year, month);
+
   // 2) API 호출 (서버가 만세력 계산 + LLM 해석)
   let aiResult: any = null;
   try {
@@ -386,10 +389,10 @@ export async function getMonthlySajuReport(
       weeklyFlow: aiResult.weeklyFlow || [],
       categoryFortunes: aiResult.categoryFortunes || { wealth: "", love: "", career: "", health: "" },
       monthlyPrescription: {
-        luckyColor: aiResult.monthlyPrescription?.luckyColor || "보라색 & 골드",
-        luckyDirection: aiResult.monthlyPrescription?.luckyDirection || "동쪽",
-        luckyNumber: aiResult.monthlyPrescription?.luckyNumber ?? 7,
-        luckyItem: aiResult.monthlyPrescription?.luckyItem || "천연 소재 손수건",
+        luckyColor: aiResult.monthlyPrescription?.luckyColor || ohengLucky.luckyColor,
+        luckyDirection: aiResult.monthlyPrescription?.luckyDirection || ohengLucky.luckyDirection,
+        luckyNumber: aiResult.monthlyPrescription?.luckyNumber ?? ohengLucky.luckyNumber,
+        luckyItem: aiResult.monthlyPrescription?.luckyItem || ohengLucky.luckyItem,
         avoidAction: aiResult.monthlyPrescription?.avoidAction || "성급한 결정이나 감정적인 대립은 피하는 것이 좋습니다.",
         bestDays: bestDays.length > 0 ? bestDays : [`${year}-${String(month).padStart(2, "0")}-07`, `${year}-${String(month).padStart(2, "0")}-18`],
       },

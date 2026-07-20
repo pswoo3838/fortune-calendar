@@ -620,7 +620,7 @@ async function handleMonthlySaju(body: MonthlySajuRequest, env: Env): Promise<Re
   const birthTime = body.birthTime || "모름";
   const saju = calculateSaju(body.birthDate, birthTime);
   const monthGeon = getMonthGeon(body.year, body.month);
-  const ohengLucky = getOhengLucky(saju.weakElement);
+  const ohengLucky = getOhengLucky(saju.weakElement, body.year, body.month);
 
   // ═══ 2. 동적 주차 수 계산 ═══
   const weekCount = getWeekCount(body.year, body.month);
