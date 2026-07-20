@@ -383,15 +383,15 @@ function buildClientFallbackReport(
   };
 }
 
-// 오래된 캐시 (동일 문장으로 중복 유도된 데이터)를 한 번에 일괄 무시/청소
-const CACHE_VERSION = "v3";
+// 오래된 캐시 (동일 문장으로 중복 유도된 데이터 및 결제 실패 잔재)를 한 번에 일괄 무시/청소
+const CACHE_VERSION = "v4";
 
 if (typeof window !== "undefined" && window.localStorage) {
   try {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith("fortune_monthly_saju_") && !key.includes(`_v3_`)) {
+      if (key && key.startsWith("fortune_monthly_saju_") && !key.includes(`_v4_`)) {
         keysToRemove.push(key);
       }
     }
@@ -412,9 +412,10 @@ if (typeof window !== "undefined" && window.localStorage) {
 export async function getMonthlySajuReport(
   profile: UserProfile,
   year: number,
-  month: number // 1~12
+  month: number, // 1~12
+  shouldSaveCache: boolean = true
 ): Promise<MonthlySajuReport> {
-  const cacheKey = `fortune_monthly_saju_v3_${profile.name}_${profile.zodiac}_${year}_${month}`;
+  const cacheKey = `fortune_monthly_saju_v4_${profile.name}_${profile.zodiac}_${year}_${month}`;
   const cached = localStorage.getItem(cacheKey);
 
   if (cached) {
@@ -480,20 +481,24 @@ export async function getMonthlySajuReport(
       generatedAt: new Date().toISOString(),
     };
 
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify(report));
-    } catch (e) {
-      console.warn("[MonthlySaju] 캐시 저장 실패:", e);
+    if (shouldSaveCache) {
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(report));
+      } catch (e) {
+        console.warn("[MonthlySaju] 캐시 저장 실패:", e);
+      }
     }
     return report;
   }
 
   // API 실패 시 고품질 동적 로컬 폴백 생성
   const fallbackReport = buildClientFallbackReport(profile, year, month, bestDays);
-  try {
-    localStorage.setItem(cacheKey, JSON.stringify(fallbackReport));
-  } catch (e) {
-    console.warn("[MonthlySaju] 폴백 캐시 저장 실패:", e);
+  if (shouldSaveCache) {
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(fallbackReport));
+    } catch (e) {
+      console.warn("[MonthlySaju] 폴백 캐시 저장 실패:", e);
+    }
   }
   return fallbackReport;
 }
@@ -546,7 +551,7 @@ export function getCachedMonthlySajuReportSync(
   month: number
 ): MonthlySajuReport | null {
   if (!profile) return null;
-  const cacheKey = `fortune_monthly_saju_v3_${profile.name}_${profile.zodiac}_${year}_${month}`;
+  const cacheKey = `fortune_monthly_saju_v4_${profile.name}_${profile.zodiac}_${year}_${month}`;
   const cached = localStorage.getItem(cacheKey);
   if (!cached) return null;
   try {

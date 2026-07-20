@@ -86,42 +86,42 @@ export function HomePage() {
 
     setShowLuckyDays(false);
     setActiveDate(null);
-    setShowMonthlySaju(true);
-    setShouldScrollToSaju(true);
     setMonthlySajuError(null);
-    setMonthlySajuReport(null); // 이전 캐시 데이터 비우기 (로딩 중 헤더 꼬임 방지)
 
-    // 1. 이미 해당 월의 로컬 캐시에 월간 운세풀이가 존재하면 무료로 즉시 노출
+    // 1. 이미 결제되어 로컬 캐시에 완벽히 존재할 때만 즉시 카드를 펼침
     const cached = getCachedMonthlySajuReportSync(profile, targetYear, targetMonth);
     if (cached) {
       setMonthlySajuReport(cached);
       setMonthlySajuLoading(false);
+      setShowMonthlySaju(true);
+      setShouldScrollToSaju(true);
       return;
     }
 
-    setMonthlySajuLoading(true);
+    // 2. 미결제 월인 경우: 카드는 열지 않고 결제 시도
+    setShowMonthlySaju(false);
+    setMonthlySajuReport(null);
 
     try {
-      // 2. 앱인토스 IAP 결제 + 사주 생성 (원자적 처리)
-      //    processProductGrant 내부에서 사주 API 호출 →
-      //    성공 시 true(결제 확정) / 실패 시 false(자동 환불)
+      // 앱인토스 IAP 결제 진행
       const { requestMonthlySajuWithPayment } = await import("../lib/paymentManager");
       const result = await requestMonthlySajuWithPayment(profile, targetYear, targetMonth);
 
       if (result.success && result.report) {
+        // 결제가 완전히 성공했을 때만 비로소 카드를 펼침!
         setMonthlySajuReport(result.report);
+        setShowMonthlySaju(true);
+        setShouldScrollToSaju(true);
       } else {
         setShowMonthlySaju(false);
-        setMonthlySajuError(result.error || "월간 운세를 불러오지 못했습니다.");
-        if (result.error) {
+        if (result.error && !result.error.includes("취소")) {
           alert(result.error);
         }
       }
     } catch (err) {
       console.error("Monthly Saju error:", err);
-      setMonthlySajuError("월간 운세를 불러오지 못했습니다. 다시 시도해주세요.");
-    } finally {
-      setMonthlySajuLoading(false);
+      setShowMonthlySaju(false);
+      alert("월간 운세 결제 처리 중 오류가 발생했습니다. 다시 시도해 주세요.");
     }
   }, [profile]);
 

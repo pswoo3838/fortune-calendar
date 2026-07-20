@@ -69,7 +69,8 @@ export function requestMonthlySajuWithPayment(
           processProductGrant: async ({ orderId }: { orderId: string }) => {
             console.log("[IAP] processProductGrant 검증 시작, orderId:", orderId);
             try {
-              generatedReport = await getMonthlySajuReport(profile, year, month);
+              // 결제 승인 확인 단계에서는 캐시 저장을 하지 않음 (shouldSaveCache = false)
+              generatedReport = await getMonthlySajuReport(profile, year, month, false);
               console.log("[IAP] 사주 생성 성공 → completeProductGrant 및 true 반환");
               if (typeof IAP.completeProductGrant === "function") {
                 IAP.completeProductGrant({ orderId }).catch(() => {});
@@ -91,11 +92,15 @@ export function requestMonthlySajuWithPayment(
               IAP.completeProductGrant({ orderId }).catch(() => {});
             }
 
+            // 결제가 완전히 성공했을 때만 비로소 로컬 캐시에 최종 저장!
+            const cacheKey = `fortune_monthly_saju_v4_${profile.name}_${profile.zodiac}_${year}_${month}`;
             if (generatedReport) {
+              try {
+                localStorage.setItem(cacheKey, JSON.stringify(generatedReport));
+              } catch (e) {}
               resolve({ success: true, report: generatedReport });
             } else {
-              // processProductGrant 완료 후 리포트 수령
-              getMonthlySajuReport(profile, year, month)
+              getMonthlySajuReport(profile, year, month, true)
                 .then((report) => resolve({ success: true, report }))
                 .catch((err) => resolve({ success: false, error: "운세 데이터를 불러오지 못했습니다." }));
             }
