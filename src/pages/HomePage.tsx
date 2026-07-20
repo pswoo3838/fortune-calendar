@@ -26,17 +26,9 @@ import type { NewEventInput } from "../hooks/useCalendarEvents";
 import { MonthlySajuCard } from "../components/MonthlySajuCard";
 import type { MonthlySajuReport } from "../types/fortune";
 import { getMonthlySajuReport, getCachedMonthlySajuReportSync } from "../lib/fortuneService";
-import { restorePendingOrders } from "../lib/paymentManager";
 
 export function HomePage() {
   const { profile, isLoading: profileLoading, register, reset } = useUserProfile();
-
-  // 토스 IAP 미결 결제 건(Pending Orders) 자동 복구 시도
-  useEffect(() => {
-    if (profile) {
-      restorePendingOrders(profile).catch((e) => console.warn("[IAP] restorePendingOrders error:", e));
-    }
-  }, [profile]);
   const {
     todayFortune, tomorrowFortune, specificFortune,
     isDailyLoading, dailyError,
@@ -111,9 +103,6 @@ export function HomePage() {
     setMonthlySajuReport(null);
 
     try {
-      // 혹시 이전 샌드박스 시뮬레이션으로 미결 상태로 남아있는 주문이 있으면 복구
-      await restorePendingOrders(profile);
-
       // 앱인토스 IAP 결제 진행
       const { requestMonthlySajuWithPayment } = await import("../lib/paymentManager");
       const result = await requestMonthlySajuWithPayment(profile, targetYear, targetMonth);
