@@ -98,9 +98,11 @@ export function HomePage() {
       return;
     }
 
-    // 2. 미결제 월인 경우: 카드는 열지 않고 결제 시도
-    setShowMonthlySaju(false);
+    // 2. 미결제 월인 경우: 로딩 카드 영역을 미리 열어 사용자에게 로딩 진행 중임을 시각적으로 안내
+    setShowMonthlySaju(true);
+    setMonthlySajuLoading(true);
     setMonthlySajuReport(null);
+    setShouldScrollToSaju(true);
 
     try {
       // 앱인토스 IAP 결제 진행
@@ -108,12 +110,12 @@ export function HomePage() {
       const result = await requestMonthlySajuWithPayment(profile, targetYear, targetMonth);
 
       if (result.success && result.report) {
-        // 결제가 완전히 성공했을 때만 비로소 카드를 펼침!
+        // 결제 및 사주 생성 완결 후 로딩 해제 및 리포트 적용
         setMonthlySajuReport(result.report);
-        setShowMonthlySaju(true);
-        setShouldScrollToSaju(true);
+        setMonthlySajuLoading(false);
       } else {
         setShowMonthlySaju(false);
+        setMonthlySajuLoading(false);
         if (result.error && !result.error.includes("취소")) {
           alert(result.error);
         }
@@ -121,6 +123,7 @@ export function HomePage() {
     } catch (err) {
       console.error("Monthly Saju error:", err);
       setShowMonthlySaju(false);
+      setMonthlySajuLoading(false);
       alert("월간 운세 결제 처리 중 오류가 발생했습니다. 다시 시도해 주세요.");
     }
   }, [profile]);
