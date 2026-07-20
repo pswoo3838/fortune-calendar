@@ -103,17 +103,8 @@ export function HomePage() {
     setMonthlySajuReport(null);
 
     try {
-      // 1-2. 이전 시뮬레이션이나 네트워크 오류로 미결 남아있는 주문(Pending Orders) 복구 확인
-      const { restorePendingOrders, requestMonthlySajuWithPayment } = await import("../lib/paymentManager");
-      const pendingReport = await restorePendingOrders(profile, targetYear, targetMonth);
-      if (pendingReport) {
-        setMonthlySajuReport(pendingReport);
-        setShowMonthlySaju(true);
-        setShouldScrollToSaju(true);
-        return;
-      }
-
-      // 2. 신규 앱인토스 IAP 결제 진행
+      // 앱인토스 IAP 결제 진행
+      const { requestMonthlySajuWithPayment } = await import("../lib/paymentManager");
       const result = await requestMonthlySajuWithPayment(profile, targetYear, targetMonth);
 
       if (result.success && result.report) {
