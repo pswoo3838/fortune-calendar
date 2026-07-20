@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { MonthlySajuReport } from "../types/fortune";
+import { CircularProgressLoader } from "./CircularProgressLoader";
 
 interface MonthlySajuCardProps {
   report: MonthlySajuReport | null;
@@ -31,14 +32,9 @@ export function MonthlySajuCard({
         </button>
       </div>
 
-      {/* 로딩 상태 */}
+      {/* 로딩 상태 (0%~100% 원형 프로그레스 로더) */}
       {isLoading && (
-        <div style={styles.loadingBox}>
-          <div style={styles.spinner} />
-          <p style={styles.loadingText}>
-            AI가 사주 명리와 월건의 기운을 꼼꼼히 분석하고 있어요...
-          </p>
-        </div>
+        <CircularProgressLoader isLoading={isLoading} />
       )}
 
       {/* 에러 상태 */}
