@@ -564,6 +564,93 @@ const BACKEND_MONTHLY_VARIATIONS: Record<number, {
   }
 };
 
+const MONTHLY_WEEKLY_FLOW_DATA: Record<number, Array<{ keyword: string; advice: string }>> = {
+  1: [
+    { keyword: "소한의 기운 및 구상", advice: "새해 첫 주에는 무리한 확장보다 한 해의 기틀을 다지고 차분히 목표를 정립하세요." },
+    { keyword: "내실 다지기 및 준비", advice: "주변의 이목에 흔들리지 말고 내실을 기하며 필요한 역량을 조용히 축적하십시오." },
+    { keyword: "귀인의 팁 및 정보 취득", advice: "선배나 지인의 조언 속에 귀한 힌트가 들어있으니 대화 시 겸손함을 유지하세요." },
+    { keyword: "자금 정돈 및 관리", advice: "지출을 재점검하고 시드머니의 보존에 힘쓰면 금전운의 기반이 굳건해집니다." },
+    { keyword: "월말 휴식 및 심신 충전", advice: "한 달을 정돈하며 따뜻한 휴식으로 다음 달의 도약을 위한 체력을 안배하세요." },
+  ],
+  2: [
+    { keyword: "입춘의 생기 및 시동", advice: "봄의 따스한 파동이 감돌기 시작하니 멈춰있던 계획을 차분히 가동해 보세요." },
+    { keyword: "인맥 확충 및 소통", advice: "새로운 인연과의 상생 기운이 피어나니 마음의 문을 열고 다정하게 대화하세요." },
+    { keyword: "추진력 상승 및 실행", advice: "망설이던 아이디어를 과감하게 행동으로 옮기면 주변의 긍정적 반응이 따릅니다." },
+    { keyword: "성과 가시화 및 보상", advice: "작은 결실이 눈앞에 나타나며 의욕이 고취되는 유익하고 희망찬 주간입니다." },
+    { keyword: "균형 유지 및 정돈", advice: "의욕이 과해지지 않도록 속도를 조절하며 주변 사람들과 결실을 공유하세요." },
+  ],
+  3: [
+    { keyword: "경칩의 활력 및 탐색", advice: "만물이 도약하는 흐름에 맞춰 다양한 시도와 정보 수집에 집중해 보세요." },
+    { keyword: "협동 작업 및 도약", advice: "혼자 처리하기보다 팀원이나 동료와 역할을 나누어 협력할 때 시너지가 납니다." },
+    { keyword: "재물 기회 포착", advice: "실속 있는 금전 정보나 유리한 거래 조건이 다가오니 기회를 놓치지 마세요." },
+    { keyword: "역량 발휘 및 매력 상승", advice: "본인의 재능과 전문성이 돋보이는 시기이니 당당하게 의견을 피력하세요." },
+    { keyword: "환절기 건강 안배", advice: "활동량이 늘어난 만큼 면역력과 수면 밸런스를 꼼꼼히 챙기시기 바랍니다." },
+  ],
+  4: [
+    { keyword: "청명의 정화 및 안착", advice: "주변 환경과 서류, 불필요한 인맥을 정돈하여 마음의 여유공간을 만드세요." },
+    { keyword: "신뢰 구축 및 화합", advice: "상대방의 내면을 진솔하게 살필 때 깊은 유대감과 두터운 신뢰가 형성됩니다." },
+    { keyword: "과제 완성도 상향", advice: "디테일에 집중하여 일을 마무리 지으면 예상보다 높은 호평을 얻게 됩니다." },
+    { keyword: "자산 정착 및 관리", advice: "수입과 지출의 균형이 잡히는 길한 흐름이니 장기 재테크 계획을 세우세요." },
+    { keyword: "차분한 마무리", advice: "고집을 피우기보다 주변의 피드백을 유연하게 수용하며 한 달을 정리하세요." },
+  ],
+  5: [
+    { keyword: "입하의 정열 및 발상", advice: "에너지가 샘솟는 시기입니다. 긍정적인 도전을 향해 자신 있게 첫발을 내디딛으세요." },
+    { keyword: "명예운 및 인정", advice: "직장이나 모임에서 본인의 존재감이 각인되는 계기가 생기니 솔선수범하세요." },
+    { keyword: "애정 기운 상승", advice: "당당하고 매력적인 모습이 상대의 마음을 끌어당기니 호감을 표현해 보세요." },
+    { keyword: "성과 창출 및 결실", advice: "노력해 온 분야에서 가시적인 성과나 승진, 자격 취득 등의 기쁨이 따릅니다." },
+    { keyword: "감정 조율 및 쿨다운", advice: "순간의 조급함이나 언쟁을 피하고 겸손하고 아량 넓은 태도를 보여주세요." },
+  ],
+  6: [
+    { keyword: "망종의 열매 준비", advice: "결실이 무르익기 직전이니 끝까지 신중함과 인내심을 잃지 않는 것이 핵심입니다." },
+    { keyword: "빠른 판단 및 추진", advice: "우유부단함을 버리고 냉철하고 신속한 결정을 내릴 때 이득이 극대화됩니다." },
+    { keyword: "인센티브 및 수혜", advice: "금전적인 보상이나 부수입의 기회가 생겨나 통장이 알차게 채워집니다." },
+    { keyword: "공통 목표 합의", advice: "연인이나 파트너와 장기적인 가치관을 공유하며 유대를 굳건히 하십시오." },
+    { keyword: "체력 안배 및 쉬어가기", advice: "여름철 체력 소모에 유의하여 무리한 일정을 줄이고 숙면을 취하세요." },
+  ],
+  7: [
+    { keyword: "소서의 차분한 완충", advice: "무더위 속에서도 중심을 잃지 말고 현재 지닌 자산과 가치를 안전하게 지키세요." },
+    { keyword: "포근한 소통 및 배려", advice: "소소한 일상을 공유하며 주변 인연들에게 따뜻한 위로와 격려를 전달하세요." },
+    { keyword: "내실 검토 및 오류 수정", advice: "확장보다 기존 프로젝트의 누락된 부분을 보완하면 실수를 완벽히 방지합니다." },
+    { keyword: "안정적 수익 도모", advice: "고위험 투자보다 안정적인 자산 운용에 주력하는 것이 지혜로운 선택입니다." },
+    { keyword: "타인 시선 내려놓기", advice: "남들의 평판에 연연하지 말고 본인의 소신과 내면의 평화를 우선시하세요." },
+  ],
+  8: [
+    { keyword: "입추의 예리한 결단", advice: "서늘한 금 기운이 작동하니 감정을 배제하고 이성적인 판단으로 승부하세요." },
+    { keyword: "수확 및 결실 손에 쥐기", advice: "공들여온 일의 결실이 손에 잡히는 길운입니다. 마무리를 확실하게 지으세요." },
+    { keyword: "분석력 극대화", advice: "복잡하게 꼬였던 난제를 명쾌하고 정교하게 정리해 내어 능력을 증명합니다." },
+    { keyword: "쿨한 이성 관계", advice: "현실적이고 건설적인 대화를 통해 상호 간의 관계를 단단하게 다지세요." },
+    { keyword: "언행 주의 및 따뜻함", advice: "단호한 표현이 냉정하게 보이지 않도록 부드러운 언사를 곁들여 대화하세요." },
+  ],
+  9: [
+    { keyword: "백로의 풍요 및 기쁨", advice: "노력이 알짜배기 실속으로 환원되는 달의 시작입니다. 기쁜 마음으로 임하세요." },
+    { keyword: "재물창고 충전", advice: "뜻밖의 유익한 딜이나 수입 기회가 찾아와 자산이 넉넉해지는 주간입니다." },
+    { keyword: "애정전선 화사함", advice: "정성 어린 배려가 상대방의 깊은 마음을 열어 낭만적인 분위기가 피어납니다." },
+    { keyword: "최고 품질 완성", advice: "수행 결과물이 대내외적으로 두터운 호평을 받아 명성이 크게 상승합니다." },
+    { keyword: "완벽주의 조율", advice: "자신의 높은 기준을 타인에게 강요하지 말고 포용력 있게 품어주세요." },
+  ],
+  10: [
+    { keyword: "한로의 지혜로운 저장", advice: "화려한 겉치레보다 실속 있는 가치를 추구하며 조용히 내실을 다지십시오." },
+    { keyword: "귀인의 조력 및 감싸안음", advice: "서로의 허물을 감싸주는 따스한 인연 속에서 든든한 조력자를 만나게 됩니다." },
+    { keyword: "묵묵한 역량 발휘", advice: "보이지 않는 곳에서 성실히 쌓아온 내공이 빛을 발해 난제를 극복해 냅니다." },
+    { keyword: "알짜 자금 축적", advice: "불필요한 지출이 대폭 줄어들고 차곡차곡 미래를 위한 비상금이 모입니다." },
+    { keyword: "성급한 신규 확장 경계", advice: "불확실한 투자나 섣부른 계약은 다음 기회로 미루고 현재를 공고히 하세요." },
+  ],
+  11: [
+    { keyword: "입동의 깊은 통찰", advice: "지혜의 물길이 트이는 시기입니다. 복잡한 문제의 핵심을 꿰뚫는 혜안이 생깁니다." },
+    { keyword: "지식 투자 및 자기개발", advice: "배움이나 강의, 지적 자산에 투자하면 향후 커다란 자산으로 돌아옵니다." },
+    { keyword: "진솔한 감성 소통", advice: "마음속 깊은 고민과 진심을 터놓고 공유하며 끈끈한 유대감을 형성하세요." },
+    { keyword: "성공적 해법 도출", advice: "냉철한 정보 분석을 통해 조직이나 본인의 난제에 명쾌한 답을 제시합니다." },
+    { keyword: "과도한 생각 경계 및 실행", advice: "생각이 너무 많아 주저하지 말고 적절한 타이밍에 과감히 행동으로 옮기세요." },
+  ],
+  12: [
+    { keyword: "대설의 충전 및 고찰", advice: "한 해를 차분히 돌아보고 내면의 신념을 응축하며 새 도약을 준비하는 주간입니다." },
+    { keyword: "시드머니 수호", advice: "사치와 연말 허례허시 지출을 차단하여 알뜰하게 자금을 수호하시기 바랍니다." },
+    { keyword: "정갈하고 아늑한 애정", advice: "조용하고 아늑한 공간에서 오순도순 담소를 나누며 깊은 사랑을 다지세요." },
+    { keyword: "차기 연도 전략 수립", advice: "다음 해의 구체적인 목표와 마일스톤을 수립하면 운기의 흐름이 매우 길해집니다." },
+    { keyword: "온열 체력 관리", advice: "차가운 기운에 몸이 해를 입지 않도록 따뜻한 성질의 음식과 휴식을 취하세요." },
+  ],
+};
+
 /** 검증 실패 시 fallback JSON 생성 (개인화 및 풍성한 풀이 템플릿 제공) */
 function buildFallbackSajuResponse(
   name: string,
@@ -574,26 +661,20 @@ function buildFallbackSajuResponse(
   gender: string,
 ): Record<string, unknown> {
   const mData = BACKEND_MONTHLY_VARIATIONS[month] || BACKEND_MONTHLY_VARIATIONS[9];
+  const monthFlowData = MONTHLY_WEEKLY_FLOW_DATA[month] || MONTHLY_WEEKLY_FLOW_DATA[9];
 
   const weeklyFlow = weekRanges.map((range, i) => {
-    const keywords = ["기반 확립 및 탐색", "동반자 및 귀인 협력", "실질 성과 및 도약", "수확 및 자금 정리", "지혜로운 마무리"];
-    const advices = [
-      "월초에는 새로운 기운을 받아들일 준비를 하는 주간입니다. 주변 상황을 관찰하고 신중히 계획을 다지세요.",
-      "대인관계에서 뜻밖의 조력자나 좋은 정보를 만날 운기입니다. 소통을 늘리고 의견에 경청해 보세요.",
-      "그동안 공들여온 일이 탄력을 받아 속도가 붙기 시작합니다. 적극적으로 본인의 의사를 표현할 때입니다.",
-      "금전과 실질적 결과가 내 주머니로 들어오는 좋은 기운이 돕습니다. 맺고 끊음을 확실히 하면 더욱 길합니다.",
-      "이달의 성과를 온전히 보관하고 체력을 안배하며 휴식을 취하는 것이 유리한 시기입니다.",
-    ];
+    const item = monthFlowData[i] || monthFlowData[monthFlowData.length - 1];
     return {
       week: i + 1,
       dateRange: range,
-      keyword: keywords[i] || "흐름 유지",
-      advice: advices[i] || "차분하게 본인의 중심을 지키고 다음 기운을 준비해 보세요.",
+      keyword: item.keyword,
+      advice: item.advice,
     };
   });
 
   const overallTitle = `${zodiac}띠 ${name}님을 위한 ${month}월 - ${mData.titleSuffix}`;
-  const overallDesc = `${name}님의 태어난 해의 기운과 ${month}월의 절기 흐름을 대조하여 분석한 결과, ${mData.descTheme} 초반부에는 주춤할 수 있으나 중반 이후부터 본인의 부족한 오행을 채워줄 긍정적인 파동이 함께하니, 용기를 가지고 임하시길 바랍니다.`;
+  const overallDesc = `${name}님의 본연의 기운과 ${month}월의 절기 파동을 종합 분석한 결과, ${mData.descTheme}`;
 
   return {
     monthlyOverview: {
@@ -603,10 +684,10 @@ function buildFallbackSajuResponse(
     },
     weeklyFlow,
     categoryFortunes: {
-      wealth: `${name}님의 이번 ${month}월 금전운: ${mData.wealthText}`,
-      love: `애정과 인연 영역: ${mData.loveText}`,
-      career: `${zodiac}띠 ${gender}성 ${name}님의 일/학업적 기운: ${mData.careerText}`,
-      health: `심신 관리: ${mData.healthText}`,
+      wealth: `${name}님의 ${month}월 금전운: ${mData.wealthText}`,
+      love: `${month}월 애정 및 인간관계: ${mData.loveText}`,
+      career: `${zodiac}띠 ${gender}성 ${name}님의 ${month}월 직장/학업 기운: ${mData.careerText}`,
+      health: `${month}월 건강 및 심신 관리: ${mData.healthText}`,
     },
     monthlyPrescription: {
       luckyItem: "우디 계열 디퓨저 또는 스마트 워치 스트랩",
