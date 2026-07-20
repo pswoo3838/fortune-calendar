@@ -56,27 +56,29 @@ export function requestMonthlySajuWithPayment(
         throw new Error("IAP SDK not available in this environment");
       }
 
-      // 사주 생성 결과를 processProductGrant 밖으로 전달하기 위한 변수 및 병렬 시동
       let generatedReport: MonthlySajuReport | null = null;
-      const reportPromise = getMonthlySajuReport(profile, year, month)
-        .then((rep) => { generatedReport = rep; return rep; })
-        .catch(() => null);
 
       const cleanup = IAP.createOneTimePurchaseOrder({
         options: {
           sku: MONTHLY_SAJU_SKU,
           /**
            * ★ 결제 성공 후 앱인토스가 호출하는 상품 지급 콜백
-           * 토스 SDK 타임아웃 방지를 위해 즉시 true 반환
+           * - true 반환 → 지급 완료, 결제 확정
+           * - false 반환 → 지급 실패, 앱인토스가 자동 환불 (캐시 저장을 안 함)
            */
           processProductGrant: async ({ orderId }: { orderId: string }) => {
-            console.log("[IAP] processProductGrant 즉시 승인, orderId:", orderId);
+            console.log("[IAP] processProductGrant 검증 시작, orderId:", orderId);
             try {
+              generatedReport = await getMonthlySajuReport(profile, year, month);
+              console.log("[IAP] 사주 생성 성공 → completeProductGrant 및 true 반환");
               if (typeof IAP.completeProductGrant === "function") {
                 IAP.completeProductGrant({ orderId }).catch(() => {});
               }
-            } catch (e) {}
-            return true;
+              return true;
+            } catch (err) {
+              console.error("[IAP] 사주 생성 실패 → false 반환 (자동 환불)", err);
+              return false; // false 반환 시 토스가 자동 환불
+            }
           },
         },
         onEvent: (event: any) => {
@@ -89,14 +91,14 @@ export function requestMonthlySajuWithPayment(
               IAP.completeProductGrant({ orderId }).catch(() => {});
             }
 
-            void reportPromise.then((rep) => {
-              const finalReport = rep || generatedReport;
-              if (finalReport) {
-                resolve({ success: true, report: finalReport });
-              } else {
-                resolve({ success: false, error: "운세 데이터가 생성되었으나 로드에 실패했습니다." });
-              }
-            });
+            if (generatedReport) {
+              resolve({ success: true, report: generatedReport });
+            } else {
+              // processProductGrant 완료 후 리포트 수령
+              getMonthlySajuReport(profile, year, month)
+                .then((report) => resolve({ success: true, report }))
+                .catch((err) => resolve({ success: false, error: "운세 데이터를 불러오지 못했습니다." }));
+            }
           } else if (event.type === "grantFailed") {
             // processProductGrant에서 false를 반환한 경우 — 자동 환불됨
             cleanup?.();

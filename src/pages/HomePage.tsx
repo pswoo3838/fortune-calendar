@@ -111,7 +111,11 @@ export function HomePage() {
       if (result.success && result.report) {
         setMonthlySajuReport(result.report);
       } else {
+        setShowMonthlySaju(false);
         setMonthlySajuError(result.error || "월간 운세를 불러오지 못했습니다.");
+        if (result.error) {
+          alert(result.error);
+        }
       }
     } catch (err) {
       console.error("Monthly Saju error:", err);
