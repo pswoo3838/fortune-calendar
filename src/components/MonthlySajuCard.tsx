@@ -6,6 +6,8 @@ interface MonthlySajuCardProps {
   report: MonthlySajuReport | null;
   isLoading: boolean;
   error: string | null;
+  targetYear: number;
+  targetMonth: number;
   onClose: () => void;
 }
 
@@ -13,6 +15,8 @@ export function MonthlySajuCard({
   report,
   isLoading,
   error,
+  targetYear,
+  targetMonth,
   onClose,
 }: MonthlySajuCardProps) {
   if (!report && !isLoading && !error) return null;
@@ -22,12 +26,12 @@ export function MonthlySajuCard({
       {/* 헤더 */}
       <div style={styles.header}>
         <div>
-          <span style={styles.badge}>🔮 990 월간 사주</span>
+          <span style={styles.badge}>🔮 990 월간 운세</span>
           <h2 style={styles.title}>
-            {report ? `${report.year}년 ${report.month}월 명리 사주풀이` : "월간 사주 분석 중"}
+            {report ? `${report.year}년 ${report.month}월 운세풀이` : `${targetYear}년 ${targetMonth}월 운세풀이`}
           </h2>
         </div>
-        <button type="button" style={styles.closeBtn} onClick={onClose} aria-label="월간 사주 카드 닫기">
+        <button type="button" style={styles.closeBtn} onClick={onClose} aria-label="월간 운세 카드 닫기">
           ✕
         </button>
       </div>
@@ -55,6 +59,30 @@ export function MonthlySajuCard({
                 {report.userProfile.zodiac}띠 · {report.userProfile.gender}성 · {report.userProfile.birthDate} ({report.userProfile.birthTime || "시간모름"})
               </span>
             </div>
+            {/* 코드 확정 사주팔자 한자 표시 */}
+            {report.sajuPillars && (
+              <div style={styles.sajuRow}>
+                <span style={styles.sajuPillarItem}>
+                  <span style={styles.sajuLabel}>年</span>
+                  <span style={styles.sajuHanja}>{report.sajuPillars.yearPillar}</span>
+                </span>
+                <span style={styles.sajuPillarItem}>
+                  <span style={styles.sajuLabel}>月</span>
+                  <span style={styles.sajuHanja}>{report.sajuPillars.monthPillar}</span>
+                </span>
+                <span style={styles.sajuPillarItem}>
+                  <span style={styles.sajuLabel}>日</span>
+                  <span style={styles.sajuHanja}>{report.sajuPillars.dayPillar}</span>
+                </span>
+                <span style={styles.sajuPillarItem}>
+                  <span style={styles.sajuLabel}>時</span>
+                  <span style={styles.sajuHanja}>{report.sajuPillars.hourPillar || "—"}</span>
+                </span>
+                <span style={styles.sajuElementInfo}>
+                  주도: {report.sajuPillars.dominantElement} · 부족: {report.sajuPillars.weakElement}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* 2. 사주 총평 및 핵심 헤드라인 */}
@@ -96,7 +124,10 @@ export function MonthlySajuCard({
             <div style={styles.weeklyList}>
               {report.weeklyFlow.map((w) => (
                 <div key={w.week} style={styles.weeklyItem}>
-                  <div style={styles.weeklyBadge}>{w.week}주차</div>
+                  <div style={styles.weeklyBadgeCol}>
+                    <div style={styles.weeklyBadge}>{w.week}주차</div>
+                    {w.dateRange && <span style={styles.weeklyDateRange}>{w.dateRange}</span>}
+                  </div>
                   <div style={styles.weeklyContent}>
                     <span style={styles.weeklyKeyword}>{w.keyword}</span>
                     <p style={styles.weeklyAdvice}>{w.advice}</p>
@@ -171,6 +202,12 @@ export function MonthlySajuCard({
               </div>
             </div>
           </div>
+
+          {/* 면책 문구 */}
+          <p style={styles.disclaimer}>
+            ※ 본 콘텐츠는 생성형 AI 기술을 활용하여 분석한 결과물입니다.<br />
+            이 운세는 재미와 참고 목적으로 제공되며, 중요한 결정에는 전문가와 상담하시길 권합니다.
+          </p>
         </div>
       )}
     </div>
@@ -247,6 +284,8 @@ const styles: Record<string, CSSProperties> = {
     fontSize: "13px",
     color: "#F04452",
     margin: 0,
+    whiteSpace: "pre-line",
+    lineHeight: "1.5",
   },
   profileCard: {
     backgroundColor: "#F9FAFB",
@@ -437,5 +476,58 @@ const styles: Record<string, CSSProperties> = {
     backgroundColor: "#EDE9FF",
     padding: "4px 10px",
     borderRadius: "16px",
+  },
+  // 사주팔자 한자 표시
+  sajuRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    marginTop: "10px",
+    paddingTop: "8px",
+    borderTop: "1px dashed #E5E8EB",
+    flexWrap: "wrap",
+  },
+  sajuPillarItem: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "2px",
+  },
+  sajuLabel: {
+    fontSize: "10px",
+    color: "#8B95A1",
+    fontWeight: 600,
+  },
+  sajuHanja: {
+    fontSize: "16px",
+    fontWeight: 800,
+    color: "#6B4EFF",
+    letterSpacing: "2px",
+  },
+  sajuElementInfo: {
+    fontSize: "11px",
+    color: "#6B7684",
+    marginLeft: "auto",
+  },
+  // 주차별 날짜 범위
+  weeklyBadgeCol: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "2px",
+    flexShrink: 0,
+  },
+  weeklyDateRange: {
+    fontSize: "9px",
+    color: "#8B95A1",
+    fontWeight: 500,
+  },
+  // 면책 문구
+  disclaimer: {
+    fontSize: "10px",
+    color: "#AEB5BC",
+    textAlign: "center",
+    margin: "8px 0 0",
+    lineHeight: "1.4",
   },
 };

@@ -311,7 +311,7 @@ export function Calendar({
               </div>
               <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" }}>
                 <button type="button" style={styles.monthlySajuBtn} onClick={() => onRequestMonthlySaju(selectedDate)}>
-                  🔮 990 월간 사주
+                  🔮 990 월간 운세
                 </button>
                 <button type="button" style={styles.fortuneBtn} onClick={() => onRequestFortune(selectedDate)}>
                   🔮 운세보기

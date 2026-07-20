@@ -44,11 +44,11 @@ export function CircularProgressLoader({
   // 진행률에 따른 다이내믹 메시지
   const getDynamicStatusText = (p: number) => {
     if (message) return message;
-    if (p < 25) return "사주팔자와 생년월일 기운을 읽고 있어요...";
-    if (p < 65) return "gpt-4o-mini AI가 이달의 월건 기운을 분석하는 중...";
-    if (p < 90) return "주차별 운세와 4대 테마 사주를 가공하고 있어요...";
-    if (p < 100) return "거의 다 되었어요! 사주풀이 리포트를 정돈 중...";
-    return "사주풀이가 완료되었습니다!";
+    if (p < 25) return "사주팔자와 생년월일의 기운을 대조하고 있어요...";
+    if (p < 65) return "명리학 전문 AI가 이달의 월건 기운을 정밀 분석하는 중...";
+    if (p < 90) return "주차별 흐름과 테마별 명리 운세를 조율하고 있어요...";
+    if (p < 100) return "거의 다 되었어요! 개인화 운세 리포트를 다듬는 중...";
+    return "월간 운세 리포트 작성이 완료되었습니다!";
   };
 
   const displayPercent = Math.min(100, Math.floor(progress));

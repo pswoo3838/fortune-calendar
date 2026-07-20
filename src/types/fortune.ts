@@ -164,11 +164,23 @@ export interface AIFortuneResponse {
   dailyFortunes: Omit<DailyFortune, "zodiac">[];
 }
 
-// 990 월간 사주 풀이 리포트
+// 990 월간 운세 — 코드 확정 사주팔자
+export interface SajuPillarsData {
+  yearPillar: string;           // "甲子"
+  monthPillar: string;          // "丙寅"
+  dayPillar: string;            // "庚午"
+  hourPillar: string | null;    // "壬子" or null (모름)
+  dominantElement: string;      // "토"
+  weakElement: string;          // "수"
+  monthGeon: string;            // "甲寅월"
+}
+
+// 990 월간 운세 풀이 리포트
 export interface MonthlySajuReport {
   year: number;
   month: number; // 1-indexed (1~12)
   userProfile: UserProfile;
+  sajuPillars?: SajuPillarsData; // 코드로 확정된 사주팔자
   monthlyOverview: {
     title: string;
     description: string;
@@ -182,6 +194,7 @@ export interface MonthlySajuReport {
   };
   weeklyFlow: {
     week: number;
+    dateRange?: string; // "1일~7일"
     keyword: string;
     advice: string;
   }[];

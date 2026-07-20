@@ -66,12 +66,14 @@ export function HomePage() {
   const [luckyDaysLoading, setLuckyDaysLoading] = useState(false);
   const [shouldScrollToFortune, setShouldScrollToFortune] = useState(false);
 
-  // ── 990 월간 사주 카드 상태 ──
+  // ── 990 월간 운세 카드 상태 ──
   const [monthlySajuReport, setMonthlySajuReport] = useState<MonthlySajuReport | null>(null);
   const [monthlySajuLoading, setMonthlySajuLoading] = useState(false);
   const [monthlySajuError, setMonthlySajuError] = useState<string | null>(null);
   const [showMonthlySaju, setShowMonthlySaju] = useState(false);
   const [shouldScrollToSaju, setShouldScrollToSaju] = useState(false);
+  const [monthlySajuTargetYear, setMonthlySajuTargetYear] = useState<number>(new Date().getFullYear());
+  const [monthlySajuTargetMonth, setMonthlySajuTargetMonth] = useState<number>(new Date().getMonth() + 1);
 
   const handleRequestMonthlySaju = useCallback(async (dateStr: string) => {
     if (!profile) return;
@@ -79,13 +81,17 @@ export function HomePage() {
     const targetYear = Number(yStr);
     const targetMonth = Number(mStr);
 
+    setMonthlySajuTargetYear(targetYear);
+    setMonthlySajuTargetMonth(targetMonth);
+
     setShowLuckyDays(false);
     setActiveDate(null);
     setShowMonthlySaju(true);
     setShouldScrollToSaju(true);
     setMonthlySajuError(null);
+    setMonthlySajuReport(null); // 이전 캐시 데이터 비우기 (로딩 중 헤더 꼬임 방지)
 
-    // 1. 이미 해당 월의 로컬 캐시에 월간 사주풀이가 존재하는지 확인 (미리 본 달이면 무료로 즉시 노출)
+    // 1. 이미 해당 월의 로컬 캐시에 월간 운세풀이가 존재하면 무료로 즉시 노출
     const cached = getCachedMonthlySajuReportSync(profile, targetYear, targetMonth);
     if (cached) {
       setMonthlySajuReport(cached);
@@ -96,21 +102,20 @@ export function HomePage() {
     setMonthlySajuLoading(true);
 
     try {
-      // 2. 캐시 없으면 결제 진행
-      const { requestMonthlySajuPayment } = await import("../lib/paymentManager");
-      const payResult = await requestMonthlySajuPayment();
+      // 2. 앱인토스 IAP 결제 + 사주 생성 (원자적 처리)
+      //    processProductGrant 내부에서 사주 API 호출 →
+      //    성공 시 true(결제 확정) / 실패 시 false(자동 환불)
+      const { requestMonthlySajuWithPayment } = await import("../lib/paymentManager");
+      const result = await requestMonthlySajuWithPayment(profile, targetYear, targetMonth);
 
-      if (!payResult.success) {
-        setMonthlySajuError(payResult.error || "결제가 취소되었습니다.");
-        return;
+      if (result.success && result.report) {
+        setMonthlySajuReport(result.report);
+      } else {
+        setMonthlySajuError(result.error || "월간 운세를 불러오지 못했습니다.");
       }
-
-      // 3. 결제 성공 후 월간 사주 생성 및 캐시 저장
-      const report = await getMonthlySajuReport(profile, targetYear, targetMonth);
-      setMonthlySajuReport(report);
     } catch (err) {
       console.error("Monthly Saju error:", err);
-      setMonthlySajuError("월간 사주를 불러오지 못했습니다. 다시 시도해주세요.");
+      setMonthlySajuError("월간 운세를 불러오지 못했습니다. 다시 시도해주세요.");
     } finally {
       setMonthlySajuLoading(false);
     }
@@ -181,16 +186,36 @@ export function HomePage() {
     setShouldScrollToFortune(false); // 단순 날짜 선택 시에는 스크롤 안 함
 
     if (date) {
+      // 1. 일일 운세 캐시 체크 및 로드
       const cached = await checkAndLoadCachedFortune(date);
       if (cached) {
         setActiveDate(date);
       } else {
         setActiveDate(null);
       }
+
+      // 2. 월간 사주 캐시 체크 및 로드 (이전에 구매한 월이라면 자동으로 하단 카드로 펼쳐줌)
+      if (profile) {
+        const [yStr, mStr] = date.split("-");
+        const targetYear = Number(yStr);
+        const targetMonth = Number(mStr);
+        const cachedSaju = getCachedMonthlySajuReportSync(profile, targetYear, targetMonth);
+        if (cachedSaju) {
+          setMonthlySajuTargetYear(targetYear);
+          setMonthlySajuTargetMonth(targetMonth);
+          setMonthlySajuReport(cachedSaju);
+          setShowMonthlySaju(true);
+        } else {
+          setShowMonthlySaju(false);
+          setMonthlySajuReport(null);
+        }
+      }
     } else {
       setActiveDate(null);
+      setShowMonthlySaju(false);
+      setMonthlySajuReport(null);
     }
-  }, [syncToDate, checkAndLoadCachedFortune]);
+  }, [profile, syncToDate, checkAndLoadCachedFortune]);
 
   const handleRequestFortune = useCallback(async (date: string) => {
     setActiveDate(date);
@@ -233,7 +258,7 @@ export function HomePage() {
     activeDate === tomorrow() ? tomorrowFortune :
     activeDate ? specificFortune : null;
 
-  // 운세 / 월간 사주 로드 후 스크롤을 위한 Ref 및 Effect
+  // 운세 / 월간 운세 로드 후 스크롤을 위한 Ref 및 Effect
   const fortuneAreaRef = useRef<HTMLDivElement>(null);
   const sajuAreaRef = useRef<HTMLDivElement>(null);
 
@@ -325,17 +350,24 @@ export function HomePage() {
 
           {showLuckyDays && profile && (
             <div style={{ padding: "0 16px 16px" }}>
-              <LuckyDaysCard profile={profile} onClose={() => setShowLuckyDays(false)} />
+              <LuckyDaysCard
+                profile={profile}
+                year={selectedDate ? Number(selectedDate.split("-")[0]) : year}
+                month={selectedDate ? Number(selectedDate.split("-")[1]) : month}
+                onClose={() => setShowLuckyDays(false)}
+              />
             </div>
           )}
 
-          {/* 990 월간 사주 하단 펼침 카드 (로컬 캐시 보관 및 월별 캘린더 이동 시 바로 표시) */}
+          {/* 990 월간 운세 하단 펼침 카드 (로컬 캐시 보관 및 월별 캘린더 이동 시 바로 표시) */}
           {showMonthlySaju && (
             <div ref={sajuAreaRef} style={{ padding: "0 16px 16px" }}>
               <MonthlySajuCard
                 report={monthlySajuReport}
                 isLoading={monthlySajuLoading}
                 error={monthlySajuError}
+                targetYear={monthlySajuTargetYear}
+                targetMonth={monthlySajuTargetMonth}
                 onClose={() => setShowMonthlySaju(false)}
               />
             </div>

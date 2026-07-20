@@ -11,6 +11,8 @@ interface LuckyDay {
 
 interface LuckyDaysCardProps {
   profile: UserProfile;
+  year: number;
+  month: number;
   onClose: () => void;
 }
 
@@ -30,7 +32,7 @@ const GRADE_EMOJI: Record<string, string> = {
   대흉: "🟣",
 };
 
-export function LuckyDaysCard({ profile, onClose }: LuckyDaysCardProps) {
+export function LuckyDaysCard({ profile, year, month, onClose }: LuckyDaysCardProps) {
   const [luckyDays, setLuckyDays] = useState<LuckyDay[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +40,8 @@ export function LuckyDaysCard({ profile, onClose }: LuckyDaysCardProps) {
   useEffect(() => {
     const fetchLuckyDays = async () => {
       try {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth() + 1;
-
+        setIsLoading(true);
+        setError(null);
         const { getOrFetchLuckyDays } = await import("../lib/fortuneService");
         const good = await getOrFetchLuckyDays(profile, year, month);
 
@@ -59,10 +59,9 @@ export function LuckyDaysCard({ profile, onClose }: LuckyDaysCardProps) {
     };
 
     void fetchLuckyDays();
-  }, [profile]);
+  }, [profile, year, month]);
 
-  const now = new Date();
-  const monthLabel = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
+  const monthLabel = `${year}년 ${month}월`;
 
   return (
     <div style={styles.card}>
