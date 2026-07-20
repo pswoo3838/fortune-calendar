@@ -2,41 +2,18 @@
  * Apps-in-Toss IAP 결제 매니저
  *
  * 앱인토스 공식 IAP SDK (`createOneTimePurchaseOrder`) 기반으로 구현합니다.
- *
- * ★ 핵심: processProductGrant 콜백 안에서 사주 API를 호출하고,
- *   성공 시 true / 실패 시 false를 반환합니다.
- *   false를 반환하면 앱인토스가 자동으로 결제를 취소(환불)합니다.
- *   → 별도 환불 API 호출이 필요 없습니다.
  */
 
 import type { UserProfile, MonthlySajuReport } from "../types/fortune";
 import { getMonthlySajuReport } from "./fortuneService";
 
-// 토스 파트너 콘솔에서 등록한 상품 SKU (전달받으면 업데이트)
+// 토스 파트너 콘솔에서 등록한 상품 SKU
 export const MONTHLY_SAJU_SKU = "ait.0000033776.2b879b8b.ae90ef5574.4552208485";
-
-// ★ 앱인토스 샌드박스 네이티브 브릿지 호완성: 앱 진입 즉시 전역 processProductGrant 브릿지를 사전에 바인딩
-if (typeof window !== "undefined") {
-  import("@apps-in-toss/web-framework").then(({ IAP }: any) => {
-    if (IAP && typeof IAP.processProductGrant === "function") {
-      try {
-        IAP.processProductGrant(({ orderId }: { orderId: string }) => {
-          console.log("[IAP Global Bridge] processProductGrant 수신:", orderId);
-          if (typeof IAP.completeProductGrant === "function") {
-            IAP.completeProductGrant({ orderId }).catch(() => {});
-          }
-          return true;
-        });
-      } catch (e) {}
-    }
-  }).catch(() => {});
-}
 
 export interface SajuPaymentResult {
   success: boolean;
   report?: MonthlySajuReport;
   error?: string;
-  /** 결제가 성공했지만 지급 실패로 자동 환불된 경우 */
   autoRefunded?: boolean;
 }
 
@@ -79,22 +56,21 @@ export function requestMonthlySajuWithPayment(
         options: {
           sku: MONTHLY_SAJU_SKU,
           /**
-           * ★ 결제 성공 후 앱인토스가 호출하는 상품 지급 콜백
-           * - true 반환 → 지급 완료, 결제 확정
-           * - false 반환 → 지급 실패, 앱인토스가 자동 환불 (캐시 저장을 안 함)
+           * ★ 앱인토스 인앱 결제 상품 지급 브릿지 콜백
+           * - return true  → 지급 완료, 결제 확정
+           * - return false → 지급 실패, 앱인토스가 자동 환불 (캐시 저장을 안 함)
            */
           processProductGrant: async ({ orderId }: { orderId: string }) => {
-            console.log("[IAP] processProductGrant 즉시 승인(0ms), orderId:", orderId);
-            if (typeof IAP.completeProductGrant === "function") {
-              IAP.completeProductGrant({ orderId }).catch(() => {});
+            console.log("[IAP] processProductGrant 시작, orderId:", orderId);
+            try {
+              // 결제 승인 확인 단계에서는 캐시 저장을 하지 않음 (shouldSaveCache = false)
+              generatedReport = await getMonthlySajuReport(profile, year, month, false);
+              console.log("[IAP] 사주 생성 성공 → return true (결제 확정)");
+              return true;
+            } catch (err) {
+              console.error("[IAP] 사주 생성 실패 → return false (자동 환불)", err);
+              return false; // false 반환 시 토스가 자동 환불
             }
-
-            // 사주 생성을 await 없이 백그라운드 비동기 연산으로 처리 (샌드박스 타임아웃 튕김 100% 방지)
-            getMonthlySajuReport(profile, year, month, false)
-              .then((rep) => { generatedReport = rep; })
-              .catch((err) => console.error("[IAP] 사주 생성 연산 에러:", err));
-
-            return true;
           },
         },
         onEvent: (event: any) => {
@@ -102,10 +78,6 @@ export function requestMonthlySajuWithPayment(
 
           if (event.type === "success") {
             cleanup?.();
-            const orderId = event.orderId || event.data?.orderId;
-            if (orderId && typeof IAP.completeProductGrant === "function") {
-              IAP.completeProductGrant({ orderId }).catch(() => {});
-            }
 
             const cacheKey = `fortune_monthly_saju_v4_${profile.name}_${profile.zodiac}_${year}_${month}`;
 
@@ -124,12 +96,11 @@ export function requestMonthlySajuWithPayment(
                 .catch(() => resolve({ success: false, error: "운세 데이터를 불러오지 못했습니다." }));
             }
           } else if (event.type === "grantFailed") {
-            // processProductGrant에서 false를 반환한 경우 — 자동 환불됨
             cleanup?.();
             resolve({
               success: false,
               autoRefunded: true,
-              error: "일시적인 오류로 운세 데이터를 생성하지 못했습니다.\n결제 금액은 자동으로 환불 처리되었습니다.\n잠시 후 다시 시도해 주세요.",
+              error: "일시적인 오류로 운세 데이터를 생성하지 못했습니다.\n결제 금액은 자동으로 환불 처리되었습니다.",
             });
           }
         },
@@ -137,7 +108,6 @@ export function requestMonthlySajuWithPayment(
           console.error("[IAP] onError:", error);
           cleanup?.();
 
-          // 사용자 취소인 경우
           const msg = error?.message || error?.code || "";
           if (typeof msg === "string" && (msg.includes("cancel") || msg.includes("취소"))) {
             resolve({ success: false, error: "결제가 취소되었습니다." });
@@ -150,10 +120,9 @@ export function requestMonthlySajuWithPayment(
         },
       });
     } catch (err) {
-      console.warn("[IAP] IAP 초기화 또는 결제 진행 중 실패 (테스트 모드로 폴백 처리합니다):", err);
-      // 토스앱 외부 브라우저(데스크톱 테스트 등) 환경을 위해 로컬 mock 성공으로 처리 (1.5초 원형 로더 연출 대기)
+      console.warn("[IAP] IAP 초기화 또는 결제 진행 중 실패:", err);
       try {
-        await new Promise((res) => setTimeout(res, 1500));
+        await new Promise((res) => setTimeout(res, 1200));
         const report = await getMonthlySajuReport(profile, year, month);
         resolve({ success: true, report });
       } catch (innerErr) {
@@ -165,7 +134,6 @@ export function requestMonthlySajuWithPayment(
 
 /**
  * 앱 시작 시 미결 주문을 복원합니다.
- * (결제는 성공했으나 processProductGrant 실행 중 앱이 종료된 경우)
  */
 export async function restorePendingOrders(
   profile: UserProfile,
@@ -184,9 +152,6 @@ export async function restorePendingOrders(
 
     for (const order of orders) {
       try {
-        // 미결 주문의 상품에 대해 사주 생성 재시도
-        // (실제로는 order에서 year/month를 파싱해야 하지만,
-        //  소모품 1종이므로 현재 월 기준으로 처리)
         const now = new Date();
         const report = await getMonthlySajuReport(profile, now.getFullYear(), now.getMonth() + 1);
 
