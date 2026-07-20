@@ -23,9 +23,9 @@ import { today, tomorrow, minutesToTime } from "../lib/dateUtils";
 import type { CalendarEvent } from "../types/fortune";
 import type { NewEventInput } from "../hooks/useCalendarEvents";
 
-import { MonthlySajuModal } from "../components/MonthlySajuModal";
+import { MonthlySajuCard } from "../components/MonthlySajuCard";
 import type { MonthlySajuReport } from "../types/fortune";
-import { getMonthlySajuReport } from "../lib/fortuneService";
+import { getMonthlySajuReport, getCachedMonthlySajuReportSync } from "../lib/fortuneService";
 
 export function HomePage() {
   const { profile, isLoading: profileLoading, register, reset } = useUserProfile();
@@ -47,7 +47,7 @@ export function HomePage() {
     syncToDate,
   } = useCalendar(null, events);
 
-  // ── 모달 상태 ──
+  // ── 모달 및 카드 상태 ──
   const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -66,11 +66,12 @@ export function HomePage() {
   const [luckyDaysLoading, setLuckyDaysLoading] = useState(false);
   const [shouldScrollToFortune, setShouldScrollToFortune] = useState(false);
 
-  // ── 990 월간 사주 상태 ──
+  // ── 990 월간 사주 카드 상태 ──
   const [monthlySajuReport, setMonthlySajuReport] = useState<MonthlySajuReport | null>(null);
   const [monthlySajuLoading, setMonthlySajuLoading] = useState(false);
   const [monthlySajuError, setMonthlySajuError] = useState<string | null>(null);
-  const [monthlySajuModalOpen, setMonthlySajuModalOpen] = useState(false);
+  const [showMonthlySaju, setShowMonthlySaju] = useState(false);
+  const [shouldScrollToSaju, setShouldScrollToSaju] = useState(false);
 
   const handleRequestMonthlySaju = useCallback(async (dateStr: string) => {
     if (!profile) return;
@@ -78,12 +79,24 @@ export function HomePage() {
     const targetYear = Number(yStr);
     const targetMonth = Number(mStr);
 
-    setMonthlySajuLoading(true);
+    setShowLuckyDays(false);
+    setActiveDate(null);
+    setShowMonthlySaju(true);
+    setShouldScrollToSaju(true);
     setMonthlySajuError(null);
-    setMonthlySajuModalOpen(true);
+
+    // 1. 이미 해당 월의 로컬 캐시에 월간 사주풀이가 존재하는지 확인 (미리 본 달이면 무료로 즉시 노출)
+    const cached = getCachedMonthlySajuReportSync(profile, targetYear, targetMonth);
+    if (cached) {
+      setMonthlySajuReport(cached);
+      setMonthlySajuLoading(false);
+      return;
+    }
+
+    setMonthlySajuLoading(true);
 
     try {
-      // 1. 토스 인앱 결제 요청 (콘솔 등록 코드 바인딩)
+      // 2. 캐시 없으면 결제 진행
       const { requestMonthlySajuPayment } = await import("../lib/paymentManager");
       const payResult = await requestMonthlySajuPayment();
 
@@ -92,7 +105,7 @@ export function HomePage() {
         return;
       }
 
-      // 2. 결제 성공 후 월간 사주 생성/조회
+      // 3. 결제 성공 후 월간 사주 생성 및 캐시 저장
       const report = await getMonthlySajuReport(profile, targetYear, targetMonth);
       setMonthlySajuReport(report);
     } catch (err) {
@@ -220,18 +233,29 @@ export function HomePage() {
     activeDate === tomorrow() ? tomorrowFortune :
     activeDate ? specificFortune : null;
 
-  // 운세 로드 후 스크롤을 위한 Ref 및 Effect
+  // 운세 / 월간 사주 로드 후 스크롤을 위한 Ref 및 Effect
   const fortuneAreaRef = useRef<HTMLDivElement>(null);
+  const sajuAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (visibleFortune && !isDailyLoading && shouldScrollToFortune) {
       const timer = setTimeout(() => {
         fortuneAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        setShouldScrollToFortune(false); // 스크롤 수행 후 플래그 해제
+        setShouldScrollToFortune(false);
       }, 100);
       return () => clearTimeout(timer);
     }
   }, [visibleFortune, isDailyLoading, shouldScrollToFortune]);
+
+  useEffect(() => {
+    if ((monthlySajuReport || monthlySajuLoading || monthlySajuError) && showMonthlySaju && shouldScrollToSaju) {
+      const timer = setTimeout(() => {
+        sajuAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setShouldScrollToSaju(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [monthlySajuReport, monthlySajuLoading, monthlySajuError, showMonthlySaju, shouldScrollToSaju]);
 
   const visibleLabel =
     activeDate === today() ? "오늘의 운세" :
@@ -245,8 +269,6 @@ export function HomePage() {
 
   return (
     <div style={styles.container}>
-
-
       {/* 상단 인사말 */}
       <div style={styles.topBar}>
         <div style={styles.greeting}>
@@ -284,7 +306,7 @@ export function HomePage() {
             selectedDate={selectedDate}
           />
 
-          {!showLuckyDays && !isDailyLoading && (
+          {!showLuckyDays && !isDailyLoading && !showMonthlySaju && (
             <div style={styles.luckyBtnArea}>
               <button
                 type="button"
@@ -304,6 +326,18 @@ export function HomePage() {
           {showLuckyDays && profile && (
             <div style={{ padding: "0 16px 16px" }}>
               <LuckyDaysCard profile={profile} onClose={() => setShowLuckyDays(false)} />
+            </div>
+          )}
+
+          {/* 990 월간 사주 하단 펼침 카드 (로컬 캐시 보관 및 월별 캘린더 이동 시 바로 표시) */}
+          {showMonthlySaju && (
+            <div ref={sajuAreaRef} style={{ padding: "0 16px 16px" }}>
+              <MonthlySajuCard
+                report={monthlySajuReport}
+                isLoading={monthlySajuLoading}
+                error={monthlySajuError}
+                onClose={() => setShowMonthlySaju(false)}
+              />
             </div>
           )}
 
@@ -392,15 +426,7 @@ export function HomePage() {
         />
       )}
 
-      {/* 990 월간 사주 모달 */}
-      {monthlySajuModalOpen && (
-        <MonthlySajuModal
-          report={monthlySajuReport}
-          isLoading={monthlySajuLoading}
-          error={monthlySajuError}
-          onClose={() => setMonthlySajuModalOpen(false)}
-        />
-      )}
+
     </div>
   );
 }

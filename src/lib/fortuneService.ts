@@ -227,6 +227,25 @@ export async function getWeeklyFortune(
 }
 
 /**
+ * 저장된 월간 사주 캐시가 있는지 동기적으로 확인하고 반환합니다.
+ */
+export function getCachedMonthlySajuReportSync(
+  profile: UserProfile | null,
+  year: number,
+  month: number
+): MonthlySajuReport | null {
+  if (!profile) return null;
+  const cacheKey = `fortune_monthly_saju_${profile.name}_${profile.zodiac}_${year}_${month}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (!cached) return null;
+  try {
+    return JSON.parse(cached) as MonthlySajuReport;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
  * 특정 날짜의 운세 (주간 데이터에서 추출, 없으면 개별 API 조회)
  */
 export async function getDailyFortune(
@@ -249,9 +268,24 @@ export async function getDailyFortune(
       birthDate: profile.birthDate,
       targetDate: date,
     });
-    const newFortune = { ...res.fortune, zodiac: profile.zodiac };
-    await saveDailyFortune(newFortune); // 캐시에 저장하여 내일이 되어도 안바뀌게 함
-    return newFortune;
+
+    const [yStr, mStr] = date.split("-");
+    const luckyKey = `fortune_lucky_days_${profile.zodiac}_${Number(yStr)}_${Number(mStr)}`;
+    const luckyCached = localStorage.getItem(luckyKey);
+    let syncedFortune = { ...res.fortune, zodiac: profile.zodiac };
+
+    if (luckyCached) {
+      try {
+        const luckyList = JSON.parse(luckyCached) as LuckyDayItem[];
+        const match = luckyList.find((item) => item.date === date);
+        if (match) {
+          syncedFortune.grade = match.grade;
+        }
+      } catch (e) {}
+    }
+
+    await saveDailyFortune(syncedFortune); // 캐시에 저장하여 내일이 되어도 안바뀌게 함
+    return syncedFortune;
   } catch (err) {
     console.error("fetchDailyFortune error:", err);
     throw new Error(`해당 날짜(${date})의 운세 데이터를 찾을 수 없습니다.`);
