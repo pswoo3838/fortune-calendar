@@ -133,37 +133,41 @@ export function requestMonthlySajuWithPayment(
 }
 
 /**
- * 앱 시작 시 미결 주문을 복원합니다.
+ * 토스 샌드박스 / 라이브 결제 미결 주문(Pending Orders) 복구 플로우
+ * (결제는 성공했으나 서버 실패 시뮬레이션 등으로 미결 남은 결제건 안전 복원)
  */
 export async function restorePendingOrders(
   profile: UserProfile,
-): Promise<void> {
+  year: number,
+  month: number
+): Promise<MonthlySajuReport | null> {
   try {
     const { IAP } = await import("@apps-in-toss/web-framework") as any;
 
-    if (!IAP || typeof IAP.getPendingOrders !== "function") return;
+    if (!IAP || typeof IAP.getPendingOrders !== "function") return null;
 
-    const pendingResult = await IAP.getPendingOrders();
+    const pendingResult = await IAP.getPendingOrders().catch(() => null);
     const orders = pendingResult?.orders ?? [];
 
-    if (orders.length === 0) return;
+    if (!Array.isArray(orders) || orders.length === 0) return null;
 
-    console.log("[IAP] 미결 주문 발견:", orders.length, "건");
+    console.log("[IAP] 미결 주문(Pending Orders) 발견 및 복구 시작:", orders.length, "건");
 
     for (const order of orders) {
       try {
-        const now = new Date();
-        const report = await getMonthlySajuReport(profile, now.getFullYear(), now.getMonth() + 1);
+        const report = await getMonthlySajuReport(profile, year, month, true);
 
         if (report && typeof IAP.completeProductGrant === "function") {
-          await IAP.completeProductGrant({ orderId: order.orderId });
-          console.log("[IAP] 미결 주문 복원 완료:", order.orderId);
+          await IAP.completeProductGrant({ orderId: order.orderId }).catch(() => {});
+          console.log("[IAP] 미결 주문 복원 및 completeProductGrant 완료:", order.orderId);
+          return report;
         }
       } catch (err) {
-        console.error("[IAP] 미결 주문 복원 실패:", order.orderId, err);
+        console.error("[IAP] 미결 주문 복원 처리 중 실패:", order.orderId, err);
       }
     }
   } catch (err) {
-    console.error("[IAP] getPendingOrders 실패:", err);
+    console.warn("[IAP] getPendingOrders 복구 확인 중 경고:", err);
   }
+  return null;
 }
