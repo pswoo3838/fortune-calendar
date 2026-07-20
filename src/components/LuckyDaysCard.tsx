@@ -41,62 +41,15 @@ export function LuckyDaysCard({ profile, onClose }: LuckyDaysCardProps) {
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
-        const daysInMonth = new Date(year, month, 0).getDate();
 
-        // 1. 로컬 캐시 조회
-        const cacheKey = `fortune_lucky_days_${profile.zodiac}_${year}_${month}`;
-        const cached = localStorage.getItem(cacheKey);
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached) as LuckyDay[];
-            setLuckyDays(parsed);
-            setIsLoading(false);
-            return;
-          } catch (e) {
-            console.warn("[LuckyDays] 캐시 파싱 에러:", e);
-          }
+        const { getOrFetchLuckyDays } = await import("../lib/fortuneService");
+        const good = await getOrFetchLuckyDays(profile, year, month);
+
+        if (good.length === 0) {
+          setError("행운의 날을 불러오지 못했습니다.");
+        } else {
+          setLuckyDays(good);
         }
-
-        const WORKER_URL =
-          (import.meta.env.VITE_WORKER_URL as string | undefined) ||
-          "http://localhost:8787";
-
-        const res = await fetch(`${WORKER_URL}/api/fortune/monthly`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            zodiac: profile.zodiac,
-            gender: profile.gender,
-            birthDate: profile.birthDate,
-            year,
-            month,
-            daysInMonth,
-          }),
-        });
-
-        if (!res.ok) throw new Error("API 오류");
-
-        const data = (await res.json()) as {
-          dailySummaries: LuckyDay[];
-        };
-
-        // 대길 + 길 필터링, 날짜 순 정렬
-        const good = data.dailySummaries
-          .filter((d) => d.grade === "대길" || d.grade === "길")
-          .sort((a, b) => {
-            const gradeOrder: Record<string, number> = { 대길: 0, 길: 1 };
-            return (gradeOrder[a.grade] ?? 2) - (gradeOrder[b.grade] ?? 2);
-          })
-          .slice(0, 10);
-
-        // 2. 로컬 캐시에 저장
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify(good));
-        } catch (e) {
-          console.warn("[LuckyDays] 캐시 저장 실패:", e);
-        }
-
-        setLuckyDays(good);
       } catch (err) {
         console.error("LuckyDays fetch error:", err);
         setError("행운의 날을 불러오지 못했습니다.");

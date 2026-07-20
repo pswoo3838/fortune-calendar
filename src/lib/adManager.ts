@@ -169,41 +169,21 @@ export async function showFullScreenAd(): Promise<boolean> {
   });
 }
 
-// 무료 운세 카운터 (처음엔 바로 광고를 볼지, 1번은 무료로 할지 결정)
-// 앱 진입 시 최초 1회는 무료로 보게 해주고, 그 다음부터 광고를 띄우려면 초기값을 1 이상으로 설정합니다.
-// 요청에 따라 "한 번 보면 1개 패스"이므로, 
-// 초기값을 0으로 두면 첫 운세 클릭 시 광고 노출 -> 이후 1번 패스
-// 초기값을 1로 두면 첫 1번 패스 -> 2번째에 광고 노출 -> 이후 1번 패스
-let _freeFortunesLeft = 0;
-
 /**
- * 운세 보기 전용 전면 광고 호출 함수 (빈도 조절 적용)
+ * 운세 보기 전용 전면 광고 호출 함수 (새 운세 조회 시 매번 호출)
  */
 export async function showFortuneInterstitial(): Promise<boolean> {
-  if (_freeFortunesLeft > 0) {
-    console.log(`[Ad] 전면 광고 스킵 (무료 패스 ${_freeFortunesLeft}회 남음)`);
-    _freeFortunesLeft--;
-    return true;
-  }
-
   const fw = await getFramework();
   const isAdSupported = safeIsAdSupported(fw);
 
-  console.log("[Ad] 전면 광고 노출 시도...");
+  console.log("[Ad] 운세 조회 전면 광고 노출 시도...");
   const shown = await showFullScreenAd();
-  
+
   if (isAdSupported) {
-    if (shown) {
-      _freeFortunesLeft = 1; // 광고를 완전히 다 보았을 때만 다음 1회 무료 패스 지급
-      return true;
-    } else {
-      _freeFortunesLeft = 0; // 광고가 실패했거나 스킵/종료되면 무료 패스 없음
-      return false;
-    }
+    return shown;
   } else {
-    // 광고 SDK 미지원 개발 환경인 경우 테스트 편의상 완시로 시뮬레이션
-    console.log("[Ad] 개발 환경 시뮬레이션: 광고 성공 처리 (무료 패스 지급)");
-    _freeFortunesLeft = 1;
+    // 광고 SDK 미지원 개발 환경인 경우 성공 시뮬레이션
+    console.log("[Ad] 개발 환경 시뮬레이션: 광고 성공 처리");
     return true;
   }
 }

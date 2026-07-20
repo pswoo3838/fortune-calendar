@@ -10,6 +10,7 @@ interface CalendarProps {
   onNextMonth: () => void;
   onToday: () => void;
   onRequestFortune: (date: string) => void;
+  onRequestMonthlySaju: (date: string) => void;
   onDaySelect: (date: string | null) => void;
   onAddEvent: (date: string) => void;
   onEventClick: (event: CalendarEvent) => void;
@@ -21,9 +22,10 @@ const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 export function Calendar({
   monthLabel, calendarDays,
   onPrevMonth, onNextMonth, onToday,
-  onRequestFortune, onDaySelect, onAddEvent, onEventClick,
+  onRequestFortune, onRequestMonthlySaju, onDaySelect, onAddEvent, onEventClick,
   selectedDate,
 }: CalendarProps) {
+
   const tomorrowDate = tomorrowFn();
   const selectedPanelRef = useRef<HTMLDivElement>(null);
 
@@ -307,7 +309,10 @@ export function Calendar({
                 </p>
                 {day.lunarLabel && <p style={styles.selectedLunar}>{day.lunarLabel}</p>}
               </div>
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button type="button" style={styles.monthlySajuBtn} onClick={() => onRequestMonthlySaju(selectedDate)}>
+                  🔮 990 월간 사주
+                </button>
                 <button type="button" style={styles.fortuneBtn} onClick={() => onRequestFortune(selectedDate)}>
                   🔮 운세보기
                 </button>
@@ -395,8 +400,9 @@ const styles: Record<string, CSSProperties> = {
   selectedPanelHeader: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "10px" },
   selectedTitle: { fontSize: "15px", fontWeight: 700, color: "#1B1D1F", margin: 0 },
   selectedLunar: { fontSize: "12px", color: "#8B95A1", margin: "2px 0 0" },
+  monthlySajuBtn: { background: "#6B4EFF", border: "none", borderRadius: "8px", padding: "6px 10px", fontSize: "12px", fontWeight: 700, color: "#fff", cursor: "pointer", whiteSpace: "nowrap" },
   fortuneBtn: { background: "#F4F1FF", border: "none", borderRadius: "8px", padding: "6px 10px", fontSize: "12px", fontWeight: 600, color: "#6B4EFF", cursor: "pointer", whiteSpace: "nowrap" },
-  addEventBtn: { background: "#6B4EFF", border: "none", borderRadius: "8px", padding: "6px 12px", fontSize: "12px", fontWeight: 700, color: "#fff", cursor: "pointer", whiteSpace: "nowrap" },
+  addEventBtn: { background: "#3182F6", border: "none", borderRadius: "8px", padding: "6px 10px", fontSize: "12px", fontWeight: 700, color: "#fff", cursor: "pointer", whiteSpace: "nowrap" },
   noEvents: { fontSize: "12px", color: "#AEB5BC", textAlign: "center", padding: "10px 0", margin: 0 },
   miniEventList: { display: "flex", flexDirection: "column", gap: "6px" },
   miniEventItem: { display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", backgroundColor: "#F9FAFB", borderRadius: "10px", border: "none", cursor: "pointer", textAlign: "left" },
@@ -405,4 +411,5 @@ const styles: Record<string, CSSProperties> = {
   miniEventTime: { fontSize: "11px", color: "#8B95A1" },
   ddayPill: { fontSize: "11px", fontWeight: 700, color: "#6B4EFF", backgroundColor: "#EDE9FF", padding: "2px 6px", borderRadius: "10px" },
 };
+
 

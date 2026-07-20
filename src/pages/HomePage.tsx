@@ -23,6 +23,10 @@ import { today, tomorrow, minutesToTime } from "../lib/dateUtils";
 import type { CalendarEvent } from "../types/fortune";
 import type { NewEventInput } from "../hooks/useCalendarEvents";
 
+import { MonthlySajuModal } from "../components/MonthlySajuModal";
+import type { MonthlySajuReport } from "../types/fortune";
+import { getMonthlySajuReport } from "../lib/fortuneService";
+
 export function HomePage() {
   const { profile, isLoading: profileLoading, register, reset } = useUserProfile();
   const {
@@ -61,6 +65,43 @@ export function HomePage() {
   const [showLuckyDays, setShowLuckyDays] = useState(false);
   const [luckyDaysLoading, setLuckyDaysLoading] = useState(false);
   const [shouldScrollToFortune, setShouldScrollToFortune] = useState(false);
+
+  // ── 990 월간 사주 상태 ──
+  const [monthlySajuReport, setMonthlySajuReport] = useState<MonthlySajuReport | null>(null);
+  const [monthlySajuLoading, setMonthlySajuLoading] = useState(false);
+  const [monthlySajuError, setMonthlySajuError] = useState<string | null>(null);
+  const [monthlySajuModalOpen, setMonthlySajuModalOpen] = useState(false);
+
+  const handleRequestMonthlySaju = useCallback(async (dateStr: string) => {
+    if (!profile) return;
+    const [yStr, mStr] = dateStr.split("-");
+    const targetYear = Number(yStr);
+    const targetMonth = Number(mStr);
+
+    setMonthlySajuLoading(true);
+    setMonthlySajuError(null);
+    setMonthlySajuModalOpen(true);
+
+    try {
+      const { showFortuneInterstitial } = await import("../lib/adManager");
+      const adShown = await showFortuneInterstitial();
+      if (!adShown) {
+        throw new Error("AD_CANCELLED");
+      }
+
+      const report = await getMonthlySajuReport(profile, targetYear, targetMonth);
+      setMonthlySajuReport(report);
+    } catch (err) {
+      console.error("Monthly Saju error:", err);
+      if (err instanceof Error && err.message === "AD_CANCELLED") {
+        setMonthlySajuError("광고를 끝까지 시청해야 월간 사주를 볼 수 있습니다.");
+      } else {
+        setMonthlySajuError("월간 사주를 불러오지 못했습니다. 다시 시도해주세요.");
+      }
+    } finally {
+      setMonthlySajuLoading(false);
+    }
+  }, [profile]);
 
 
   // 상세 모달 열기
@@ -236,6 +277,7 @@ export function HomePage() {
             onNextMonth={goToNextMonth}
             onToday={goToToday}
             onRequestFortune={(date) => { void handleRequestFortune(date); }}
+            onRequestMonthlySaju={(date) => { void handleRequestMonthlySaju(date); }}
             onDaySelect={handleDaySelect}
             onAddEvent={handleAddEvent}
             onEventClick={openDetailModal}
@@ -347,6 +389,16 @@ export function HomePage() {
           onSave={handleSaveEvent}
           onDelete={removeEvent}
           onClose={handleEditModalClose}
+        />
+      )}
+
+      {/* 990 월간 사주 모달 */}
+      {monthlySajuModalOpen && (
+        <MonthlySajuModal
+          report={monthlySajuReport}
+          isLoading={monthlySajuLoading}
+          error={monthlySajuError}
+          onClose={() => setMonthlySajuModalOpen(false)}
         />
       )}
     </div>

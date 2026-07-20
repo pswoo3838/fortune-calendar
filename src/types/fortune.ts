@@ -163,3 +163,42 @@ export interface AIFortuneRequest {
 export interface AIFortuneResponse {
   dailyFortunes: Omit<DailyFortune, "zodiac">[];
 }
+
+// 990 월간 사주 풀이 리포트
+export interface MonthlySajuReport {
+  year: number;
+  month: number; // 1-indexed (1~12)
+  userProfile: UserProfile;
+  monthlyOverview: {
+    title: string;
+    description: string;
+    scores: {
+      overall: number;
+      wealth: number;
+      love: number;
+      career: number;
+      health: number;
+    };
+  };
+  weeklyFlow: {
+    week: number;
+    keyword: string;
+    advice: string;
+  }[];
+  categoryFortunes: {
+    wealth: string;
+    love: string;
+    career: string;
+    health: string;
+  };
+  monthlyPrescription: {
+    luckyColor: string;
+    luckyDirection: string;
+    luckyNumber: number;
+    luckyItem: string;
+    avoidAction: string;
+    bestDays: string[]; // "YYYY-MM-DD"
+  };
+  generatedAt: string;
+}
+
