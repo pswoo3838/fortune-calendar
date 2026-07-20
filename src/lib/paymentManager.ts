@@ -15,6 +15,23 @@ import { getMonthlySajuReport } from "./fortuneService";
 // 토스 파트너 콘솔에서 등록한 상품 SKU (전달받으면 업데이트)
 export const MONTHLY_SAJU_SKU = "ait.0000033776.2b879b8b.ae90ef5574.4552208485";
 
+// ★ 앱인토스 샌드박스 네이티브 브릿지 호완성: 앱 진입 즉시 전역 processProductGrant 브릿지를 사전에 바인딩
+if (typeof window !== "undefined") {
+  import("@apps-in-toss/web-framework").then(({ IAP }: any) => {
+    if (IAP && typeof IAP.processProductGrant === "function") {
+      try {
+        IAP.processProductGrant(({ orderId }: { orderId: string }) => {
+          console.log("[IAP Global Bridge] processProductGrant 수신:", orderId);
+          if (typeof IAP.completeProductGrant === "function") {
+            IAP.completeProductGrant({ orderId }).catch(() => {});
+          }
+          return true;
+        });
+      } catch (e) {}
+    }
+  }).catch(() => {});
+}
+
 export interface SajuPaymentResult {
   success: boolean;
   report?: MonthlySajuReport;
