@@ -360,6 +360,76 @@ function validateCommonFields(body: Record<string, unknown>): string | null {
   return null;
 }
 
+interface MonthlySajuRequest {
+  name: string;
+  zodiac: Zodiac;
+  gender: Gender;
+  birthDate: string;
+  birthTime?: string;
+  year: number;
+  month: number;
+}
+
+// --- 990 월간 사주 생성 (gpt-4o-mini) ---
+
+async function handleMonthlySaju(body: MonthlySajuRequest, env: Env): Promise<Response> {
+  const systemPrompt = `당신은 대한민국 대표 동양 철학 및 사주 명리학 대가입니다.
+사용자의 이름, 생년월일, 태어난 시간(시주), 성별, 12지신(띠) 정보를 바탕으로 ${body.year}년 ${body.month}월의 명리 사주 풀이 리포트를 생성합니다.
+반드시 정확한 JSON 형식으로만 응답해야 합니다.`;
+
+  const userPrompt = `다음 사용자 정보를 바탕으로 ${body.year}년 ${body.month}월의 990 월간 사주 풀이 리포트를 작성해주세요.
+
+- 이름: ${body.name}
+- 띠: ${body.zodiac}
+- 성별: ${body.gender}
+- 생년월일: ${body.birthDate}
+- 태어난 시간: ${body.birthTime || "모름"}
+- 해당 연/월: ${body.year}년 ${body.month}월
+
+요구되는 JSON 형식:
+{
+  "monthlyOverview": {
+    "title": "${body.month}월 핵심 사주 헤드라인 (예: 용의 기운이 약진하고 재물운이 트이는 달)",
+    "description": "${body.name}님의 사주와 ${body.year}년 ${body.month}월의 월건 기운 흐름을 조합한 깊이 있는 총평 (3~4문장)",
+    "scores": {
+      "overall": 0~100 사이 종합운 점수,
+      "wealth": 0~100 사이 재물운 점수,
+      "love": 0~100 사이 애정운 점수,
+      "career": 0~100 사이 직장/학업운 점수,
+      "health": 0~100 사이 건강운 점수
+    }
+  },
+  "weeklyFlow": [
+    { "week": 1, "keyword": "1주차 핵심 키워드", "advice": "1주차 조언" },
+    { "week": 2, "keyword": "2주차 핵심 키워드", "advice": "2주차 조언" },
+    { "week": 3, "keyword": "3주차 핵심 키워드", "advice": "3주차 조언" },
+    { "week": 4, "keyword": "4주차 핵심 키워드", "advice": "4주차 조언" }
+  ],
+  "categoryFortunes": {
+    "wealth": "재물 및 금전 운세 상세 풀이",
+    "love": "애정 및 인간관계 운세 상세 풀이",
+    "career": "직장, 사업, 학업 운세 상세 풀이",
+    "health": "건강 및 심신 관리 주의사항"
+  },
+  "monthlyPrescription": {
+    "luckyColor": "행운의 색상",
+    "luckyDirection": "행운의 방향",
+    "luckyNumber": 1~9 사이 행운의 숫자,
+    "luckyItem": "행운의 아이템",
+    "avoidAction": "이달에 피해야 할 행동 및 조심할 점"
+  }
+}`;
+
+  try {
+    const raw = await callOpenAI(systemPrompt, userPrompt, env);
+    const parsed = JSON.parse(raw);
+    return jsonResponse(parsed, env);
+  } catch (err) {
+    console.error("Monthly Saju generation error:", err);
+    return errorResponse("월간 사주 생성에 실패했습니다.", env);
+  }
+}
+
 // --- Worker 엔트리 ---
 
 export default {
@@ -380,6 +450,10 @@ export default {
 
     try {
       const body = (await request.json()) as Record<string, unknown>;
+
+      if (url.pathname === "/api/fortune/monthly-saju") {
+        return handleMonthlySaju(body as unknown as MonthlySajuRequest, env);
+      }
 
       // 공통 입력 검증
       const validationError = validateCommonFields(body);
@@ -406,4 +480,5 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>;
+
 

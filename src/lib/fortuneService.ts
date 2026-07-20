@@ -106,7 +106,22 @@ export async function getMonthlySajuReport(
   const luckyDays = await getOrFetchLuckyDays(profile, year, month);
   const bestDays = luckyDays.slice(0, 3).map((d) => d.date);
 
-  // 2) 프로필 데이터를 반영한 월간 사주 리포트 데이터 구성
+  let aiResult: any = null;
+  try {
+    const { fetchMonthlySaju } = await import("./api");
+    aiResult = await fetchMonthlySaju({
+      name: profile.name,
+      zodiac: profile.zodiac,
+      gender: profile.gender,
+      birthDate: profile.birthDate,
+      birthTime: profile.birthTime,
+      year,
+      month,
+    });
+  } catch (e) {
+    console.warn("[MonthlySaju] API 호출 실패 (폴백 데이터 사용):", e);
+  }
+
   const birthTimeText = profile.birthTime || "모름";
 
   const report: MonthlySajuReport = {
@@ -114,17 +129,17 @@ export async function getMonthlySajuReport(
     month,
     userProfile: profile,
     monthlyOverview: {
-      title: `${month}월은 ${profile.zodiac}의 기운이 피어나 재물과 명예가 트이는 달`,
-      description: `${profile.name}님의 사주(${profile.birthDate} ${birthTimeText} 태생)와 ${year}년 ${month}월의 기운이 합(合)을 이루어 지혜와 성과가 돋보입니다. 초반에는 차분히 기운을 다지고 중반 이후부터 적극적인 활동을 펼치면 큰 유익이 따릅니다.`,
+      title: aiResult?.monthlyOverview?.title || `${month}월은 ${profile.zodiac}의 기운이 피어나 재물과 명예가 트이는 달`,
+      description: aiResult?.monthlyOverview?.description || `${profile.name}님의 사주(${profile.birthDate} ${birthTimeText} 태생)와 ${year}년 ${month}월의 기운이 합(合)을 이루어 지혜와 성과가 돋보입니다. 초반에는 차분히 기운을 다지고 중반 이후부터 적극적인 활동을 펼치면 큰 유익이 따릅니다.`,
       scores: {
-        overall: 88,
-        wealth: 92,
-        love: 80,
-        career: 86,
-        health: 78,
+        overall: aiResult?.monthlyOverview?.scores?.overall ?? 88,
+        wealth: aiResult?.monthlyOverview?.scores?.wealth ?? 92,
+        love: aiResult?.monthlyOverview?.scores?.love ?? 80,
+        career: aiResult?.monthlyOverview?.scores?.career ?? 86,
+        health: aiResult?.monthlyOverview?.scores?.health ?? 78,
       },
     },
-    weeklyFlow: [
+    weeklyFlow: aiResult?.weeklyFlow || [
       {
         week: 1,
         keyword: "기반 다지기 및 준비",
@@ -147,17 +162,17 @@ export async function getMonthlySajuReport(
       },
     ],
     categoryFortunes: {
-      wealth: `${profile.name}님의 재물운은 이번 달 매우 왕성합니다. 수입의 기회가 다방면에서 생겨날 수 있으며, 장기적인 투자나 계획을 세우기에 아주 좋은 달입니다.`,
-      love: `인간관계와 애정면에서 화합의 기운이 깃듭니다. 대화 시 사소한 오해를 피하고 진솔함을 보여주면 상대방의 신뢰가 두터워집니다.`,
-      career: `직장 및 성과 영역에서 성실함이 빛을 발합니다. 중요한 발표나 도전 과제가 있다면 이달 중순 이후 추진하는 것을 추천합니다.`,
-      health: `전반적으로 안정적이나 과로로 인한 피로 누적을 유의해야 합니다. 규칙적인 수면과 가벼운 산책으로 심신 균형을 유지하세요.`,
+      wealth: aiResult?.categoryFortunes?.wealth || `${profile.name}님의 재물운은 이번 달 매우 왕성합니다. 수입의 기회가 다방면에서 생겨날 수 있으며, 장기적인 투자나 계획을 세우기에 아주 좋은 달입니다.`,
+      love: aiResult?.categoryFortunes?.love || `인간관계와 애정면에서 화합의 기운이 깃듭니다. 대화 시 사소한 오해를 피하고 진솔함을 보여주면 상대방의 신뢰가 두터워집니다.`,
+      career: aiResult?.categoryFortunes?.career || `직장 및 성과 영역에서 성실함이 빛을 발합니다. 중요한 발표나 도전 과제가 있다면 이달 중순 이후 추진하는 것을 추천합니다.`,
+      health: aiResult?.categoryFortunes?.health || `전반적으로 안정적이나 과로로 인한 피로 누적을 유의해야 합니다. 규칙적인 수면과 가벼운 산책으로 심신 균형을 유지하세요.`,
     },
     monthlyPrescription: {
-      luckyColor: "보라색 & 골드",
-      luckyDirection: "동남쪽",
-      luckyNumber: 7,
-      luckyItem: "은은한 향수 또는 고급 필기구",
-      avoidAction: "감정적인 대립이나 성급한 금전 거래",
+      luckyColor: aiResult?.monthlyPrescription?.luckyColor || "보라색 & 골드",
+      luckyDirection: aiResult?.monthlyPrescription?.luckyDirection || "동남쪽",
+      luckyNumber: aiResult?.monthlyPrescription?.luckyNumber ?? 7,
+      luckyItem: aiResult?.monthlyPrescription?.luckyItem || "은은한 향수 또는 고급 필기구",
+      avoidAction: aiResult?.monthlyPrescription?.avoidAction || "감정적인 대립이나 성급한 금전 거래",
       bestDays: bestDays.length > 0 ? bestDays : [`${year}-${String(month).padStart(2, "0")}-07`, `${year}-${String(month).padStart(2, "0")}-18`],
     },
     generatedAt: new Date().toISOString(),

@@ -36,3 +36,26 @@ export async function fetchDailyFortune(
 
   return res.json() as Promise<{ fortune: DailyFortune }>;
 }
+
+export async function fetchMonthlySaju(request: {
+  name: string;
+  zodiac: string;
+  gender: string;
+  birthDate: string;
+  birthTime?: string;
+  year: number;
+  month: number;
+}): Promise<any> {
+  const res = await fetch(`${WORKER_URL}/api/fortune/monthly-saju`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Monthly Saju API error: ${res.status} ${res.statusText}`);
+  }
+
+  return res.json();
+}
+
