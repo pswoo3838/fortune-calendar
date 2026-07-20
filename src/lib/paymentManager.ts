@@ -73,7 +73,14 @@ export function requestMonthlySajuWithPayment(
             console.log("[IAP] processProductGrant 시작, orderId:", orderId);
             try {
               generatedReport = await getMonthlySajuReport(profile, year, month);
-              console.log("[IAP] 사주 생성 성공 → true 반환 (결제 확정)");
+              console.log("[IAP] 사주 생성 성공 → completeProductGrant 호출 (결제 확정)");
+              if (typeof IAP.completeProductGrant === "function") {
+                try {
+                  await IAP.completeProductGrant({ orderId });
+                } catch (e) {
+                  console.warn("[IAP] completeProductGrant 호출 경고:", e);
+                }
+              }
               return true;
             } catch (err) {
               console.error("[IAP] 사주 생성 실패 → false 반환 (자동 환불)", err);
@@ -86,10 +93,14 @@ export function requestMonthlySajuWithPayment(
 
           if (event.type === "success") {
             cleanup?.();
+            const orderId = event.orderId || event.data?.orderId;
+            if (orderId && typeof IAP.completeProductGrant === "function") {
+              IAP.completeProductGrant({ orderId }).catch(() => {});
+            }
             if (generatedReport) {
               resolve({ success: true, report: generatedReport });
             } else {
-              // processProductGrant에서 true를 반환했는데 report가 없는 경우 (이론적으로 불가능)
+              // processProductGrant에서 true를 반환했는데 report가 없는 경우
               resolve({ success: false, error: "운세 데이터가 생성되었으나 로드에 실패했습니다." });
             }
           } else if (event.type === "grantFailed") {
