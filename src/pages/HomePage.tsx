@@ -183,39 +183,21 @@ export function HomePage() {
     }
     setSelectedDate(date);
     setShowLuckyDays(false);
-    setShouldScrollToFortune(false); // 단순 날짜 선택 시에는 스크롤 안 함
+    setShowMonthlySaju(false); // 날짜나 월 이동 시 자동으로 사주 카드가 내려오지 않도록 닫음
+    setShouldScrollToFortune(false);
 
     if (date) {
-      // 1. 일일 운세 캐시 체크 및 로드
+      // 일일 운세 캐시 체크 및 로드
       const cached = await checkAndLoadCachedFortune(date);
       if (cached) {
         setActiveDate(date);
       } else {
         setActiveDate(null);
       }
-
-      // 2. 월간 사주 캐시 체크 및 로드 (이전에 구매한 월이라면 자동으로 하단 카드로 펼쳐줌)
-      if (profile) {
-        const [yStr, mStr] = date.split("-");
-        const targetYear = Number(yStr);
-        const targetMonth = Number(mStr);
-        const cachedSaju = getCachedMonthlySajuReportSync(profile, targetYear, targetMonth);
-        if (cachedSaju) {
-          setMonthlySajuTargetYear(targetYear);
-          setMonthlySajuTargetMonth(targetMonth);
-          setMonthlySajuReport(cachedSaju);
-          setShowMonthlySaju(true);
-        } else {
-          setShowMonthlySaju(false);
-          setMonthlySajuReport(null);
-        }
-      }
     } else {
       setActiveDate(null);
-      setShowMonthlySaju(false);
-      setMonthlySajuReport(null);
     }
-  }, [profile, syncToDate, checkAndLoadCachedFortune]);
+  }, [syncToDate, checkAndLoadCachedFortune]);
 
   const handleRequestFortune = useCallback(async (date: string) => {
     setActiveDate(date);
@@ -320,9 +302,9 @@ export function HomePage() {
           <Calendar
             monthLabel={monthLabel}
             calendarDays={calendarDays}
-            onPrevMonth={goToPrevMonth}
-            onNextMonth={goToNextMonth}
-            onToday={goToToday}
+            onPrevMonth={() => { setShowMonthlySaju(false); setShowLuckyDays(false); goToPrevMonth(); }}
+            onNextMonth={() => { setShowMonthlySaju(false); setShowLuckyDays(false); goToNextMonth(); }}
+            onToday={() => { setShowMonthlySaju(false); setShowLuckyDays(false); goToToday(); }}
             onRequestFortune={(date) => { void handleRequestFortune(date); }}
             onRequestMonthlySaju={(date) => { void handleRequestMonthlySaju(date); }}
             onDaySelect={handleDaySelect}
