@@ -83,21 +83,21 @@ export function HomePage() {
     setMonthlySajuModalOpen(true);
 
     try {
-      const { showFortuneInterstitial } = await import("../lib/adManager");
-      const adShown = await showFortuneInterstitial();
-      if (!adShown) {
-        throw new Error("AD_CANCELLED");
+      // 1. 토스 인앱 결제 요청 (콘솔 등록 코드 바인딩)
+      const { requestMonthlySajuPayment } = await import("../lib/paymentManager");
+      const payResult = await requestMonthlySajuPayment();
+
+      if (!payResult.success) {
+        setMonthlySajuError(payResult.error || "결제가 취소되었습니다.");
+        return;
       }
 
+      // 2. 결제 성공 후 월간 사주 생성/조회
       const report = await getMonthlySajuReport(profile, targetYear, targetMonth);
       setMonthlySajuReport(report);
     } catch (err) {
       console.error("Monthly Saju error:", err);
-      if (err instanceof Error && err.message === "AD_CANCELLED") {
-        setMonthlySajuError("광고를 끝까지 시청해야 월간 사주를 볼 수 있습니다.");
-      } else {
-        setMonthlySajuError("월간 사주를 불러오지 못했습니다. 다시 시도해주세요.");
-      }
+      setMonthlySajuError("월간 사주를 불러오지 못했습니다. 다시 시도해주세요.");
     } finally {
       setMonthlySajuLoading(false);
     }
