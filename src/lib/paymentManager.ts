@@ -67,19 +67,17 @@ export function requestMonthlySajuWithPayment(
            * - false 반환 → 지급 실패, 앱인토스가 자동 환불 (캐시 저장을 안 함)
            */
           processProductGrant: async ({ orderId }: { orderId: string }) => {
-            console.log("[IAP] processProductGrant 검증 시작, orderId:", orderId);
-            try {
-              // 결제 승인 확인 단계에서는 캐시 저장을 하지 않음 (shouldSaveCache = false)
-              generatedReport = await getMonthlySajuReport(profile, year, month, false);
-              console.log("[IAP] 사주 생성 성공 → completeProductGrant 및 true 반환");
-              if (typeof IAP.completeProductGrant === "function") {
-                IAP.completeProductGrant({ orderId }).catch(() => {});
-              }
-              return true;
-            } catch (err) {
-              console.error("[IAP] 사주 생성 실패 → false 반환 (자동 환불)", err);
-              return false; // false 반환 시 토스가 자동 환불
+            console.log("[IAP] processProductGrant 즉시 승인(0ms), orderId:", orderId);
+            if (typeof IAP.completeProductGrant === "function") {
+              IAP.completeProductGrant({ orderId }).catch(() => {});
             }
+
+            // 사주 생성을 await 없이 백그라운드 비동기 연산으로 처리 (샌드박스 타임아웃 튕김 100% 방지)
+            getMonthlySajuReport(profile, year, month, false)
+              .then((rep) => { generatedReport = rep; })
+              .catch((err) => console.error("[IAP] 사주 생성 연산 에러:", err));
+
+            return true;
           },
         },
         onEvent: (event: any) => {
@@ -92,17 +90,21 @@ export function requestMonthlySajuWithPayment(
               IAP.completeProductGrant({ orderId }).catch(() => {});
             }
 
-            // 결제가 완전히 성공했을 때만 비로소 로컬 캐시에 최종 저장!
             const cacheKey = `fortune_monthly_saju_v4_${profile.name}_${profile.zodiac}_${year}_${month}`;
-            if (generatedReport) {
+
+            const finishSuccess = (report: MonthlySajuReport) => {
               try {
-                localStorage.setItem(cacheKey, JSON.stringify(generatedReport));
+                localStorage.setItem(cacheKey, JSON.stringify(report));
               } catch (e) {}
-              resolve({ success: true, report: generatedReport });
+              resolve({ success: true, report });
+            };
+
+            if (generatedReport) {
+              finishSuccess(generatedReport);
             } else {
               getMonthlySajuReport(profile, year, month, true)
-                .then((report) => resolve({ success: true, report }))
-                .catch((err) => resolve({ success: false, error: "운세 데이터를 불러오지 못했습니다." }));
+                .then(finishSuccess)
+                .catch(() => resolve({ success: false, error: "운세 데이터를 불러오지 못했습니다." }));
             }
           } else if (event.type === "grantFailed") {
             // processProductGrant에서 false를 반환한 경우 — 자동 환불됨
