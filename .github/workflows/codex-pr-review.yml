@@ -1,0 +1,21 @@
+name: Codex PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # TODO: Wire up Codex-powered PR review once OPENAI_API_KEY
+      # is provisioned via Codex for Open Source program.
+      # Planned flow:
+      #   1. Extract PR diff
+      #   2. Send to Codex with repo-aware context
+      #   3. Post review comments as bot
+      - name: Placeholder
+        run: echo "Codex PR review pending API credits"

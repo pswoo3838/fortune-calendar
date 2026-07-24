@@ -1,0 +1,21 @@
+name: Release Notes
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # TODO: Codex-generated release notes summarizing
+      # commits since previous tag, grouped by scope
+      # (features, fixes, docs, deps).
+      - name: Placeholder
+        run: echo "Codex release notes pending API credits"

@@ -1,0 +1,19 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened, reopened]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # TODO: Codex-powered issue triage for Korean/English bug
+      # reports. Auto-label by category (bug, manseryeok-accuracy,
+      # llm-quality, i18n, docs), suggest priority, request
+      # missing context.
+      - name: Placeholder
+        run: echo "Codex issue triage pending API credits"
