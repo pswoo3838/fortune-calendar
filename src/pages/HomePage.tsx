@@ -75,6 +75,13 @@ export function HomePage() {
   const [monthlySajuTargetYear, setMonthlySajuTargetYear] = useState<number>(new Date().getFullYear());
   const [monthlySajuTargetMonth, setMonthlySajuTargetMonth] = useState<number>(new Date().getMonth() + 1);
 
+  // ── 9990 연간 운세 카드 상태 ──
+  const [annualSajuReports, setAnnualSajuReports] = useState<MonthlySajuReport[]>([]);
+  const [annualSajuLoading, setAnnualSajuLoading] = useState(false);
+  const [annualSajuError, setAnnualSajuError] = useState<string | null>(null);
+  const [showAnnualSaju, setShowAnnualSaju] = useState(false);
+  const [shouldScrollToAnnual, setShouldScrollToAnnual] = useState(false);
+
   const handleRequestMonthlySaju = useCallback(async (dateStr: string) => {
     if (!profile) return;
     const [yStr, mStr] = dateStr.split("-");
@@ -125,6 +132,68 @@ export function HomePage() {
       setShowMonthlySaju(false);
       setMonthlySajuLoading(false);
       alert("월간 운세 결제 처리 중 오류가 발생했습니다. 다시 시도해 주세요.");
+    }
+  }, [profile]);
+
+  const handleRequestAnnualSaju = useCallback(async (dateStr: string) => {
+    if (!profile) return;
+    const [yStr, mStr] = dateStr.split("-");
+    const startYear = Number(yStr);
+    const startMonth = Number(mStr);
+
+    setShowLuckyDays(false);
+    setActiveDate(null);
+    setShowMonthlySaju(false);
+    setAnnualSajuError(null);
+
+    // 캐시 확인: 12개월 전부 캐시에 있는지 체크
+    const cachedReports: MonthlySajuReport[] = [];
+    let y = startYear;
+    let m = startMonth;
+    for (let i = 0; i < 12; i++) {
+      const cached = getCachedMonthlySajuReportSync(profile, y, m);
+      if (cached) {
+        cachedReports.push(cached);
+      } else {
+        break;
+      }
+      m++;
+      if (m > 12) { m = 1; y++; }
+    }
+
+    if (cachedReports.length === 12) {
+      setAnnualSajuReports(cachedReports);
+      setAnnualSajuLoading(false);
+      setShowAnnualSaju(true);
+      setShouldScrollToAnnual(true);
+      return;
+    }
+
+    // 미결제: 로딩 표시 후 결제 플로우
+    setShowAnnualSaju(true);
+    setAnnualSajuLoading(true);
+    setAnnualSajuReports([]);
+    setShouldScrollToAnnual(true);
+
+    try {
+      const { requestAnnualSajuWithPayment } = await import("../lib/paymentManager");
+      const result = await requestAnnualSajuWithPayment(profile, startYear, startMonth);
+
+      if (result.success && result.reports) {
+        setAnnualSajuReports(result.reports);
+        setAnnualSajuLoading(false);
+      } else {
+        setShowAnnualSaju(false);
+        setAnnualSajuLoading(false);
+        if (result.error && !result.error.includes("취소")) {
+          alert(result.error);
+        }
+      }
+    } catch (err) {
+      console.error("Annual Saju error:", err);
+      setShowAnnualSaju(false);
+      setAnnualSajuLoading(false);
+      alert("연간 운세 결제 처리 중 오류가 발생했습니다. 다시 시도해 주세요.");
     }
   }, [profile]);
 
@@ -190,7 +259,8 @@ export function HomePage() {
     }
     setSelectedDate(date);
     setShowLuckyDays(false);
-    setShowMonthlySaju(false); // 날짜나 월 이동 시 자동으로 사주 카드가 내려오지 않도록 닫음
+    setShowMonthlySaju(false);
+    setShowAnnualSaju(false);
     setShouldScrollToFortune(false);
 
     if (date) {
@@ -250,6 +320,7 @@ export function HomePage() {
   // 운세 / 월간 운세 로드 후 스크롤을 위한 Ref 및 Effect
   const fortuneAreaRef = useRef<HTMLDivElement>(null);
   const sajuAreaRef = useRef<HTMLDivElement>(null);
+  const annualAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (visibleFortune && !isDailyLoading && shouldScrollToFortune) {
@@ -270,6 +341,16 @@ export function HomePage() {
       return () => clearTimeout(timer);
     }
   }, [monthlySajuReport, monthlySajuLoading, monthlySajuError, showMonthlySaju, shouldScrollToSaju]);
+
+  useEffect(() => {
+    if ((annualSajuReports.length > 0 || annualSajuLoading || annualSajuError) && showAnnualSaju && shouldScrollToAnnual) {
+      const timer = setTimeout(() => {
+        annualAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setShouldScrollToAnnual(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [annualSajuReports, annualSajuLoading, annualSajuError, showAnnualSaju, shouldScrollToAnnual]);
 
   const visibleLabel =
     activeDate === today() ? "오늘의 운세" :
@@ -309,18 +390,19 @@ export function HomePage() {
           <Calendar
             monthLabel={monthLabel}
             calendarDays={calendarDays}
-            onPrevMonth={() => { setShowMonthlySaju(false); setShowLuckyDays(false); goToPrevMonth(); }}
-            onNextMonth={() => { setShowMonthlySaju(false); setShowLuckyDays(false); goToNextMonth(); }}
-            onToday={() => { setShowMonthlySaju(false); setShowLuckyDays(false); goToToday(); }}
+            onPrevMonth={() => { setShowMonthlySaju(false); setShowAnnualSaju(false); setShowLuckyDays(false); goToPrevMonth(); }}
+            onNextMonth={() => { setShowMonthlySaju(false); setShowAnnualSaju(false); setShowLuckyDays(false); goToNextMonth(); }}
+            onToday={() => { setShowMonthlySaju(false); setShowAnnualSaju(false); setShowLuckyDays(false); goToToday(); }}
             onRequestFortune={(date) => { void handleRequestFortune(date); }}
             onRequestMonthlySaju={(date) => { void handleRequestMonthlySaju(date); }}
+            onRequestAnnualSaju={(date) => { void handleRequestAnnualSaju(date); }}
             onDaySelect={handleDaySelect}
             onAddEvent={handleAddEvent}
             onEventClick={openDetailModal}
             selectedDate={selectedDate}
           />
 
-          {!showLuckyDays && !isDailyLoading && !showMonthlySaju && (
+          {!showLuckyDays && !isDailyLoading && !showMonthlySaju && !showAnnualSaju && (
             <div style={styles.luckyBtnArea}>
               <button
                 type="button"
@@ -359,6 +441,57 @@ export function HomePage() {
                 targetMonth={monthlySajuTargetMonth}
                 onClose={() => setShowMonthlySaju(false)}
               />
+            </div>
+          )}
+
+          {/* 9990 연간 운세 하단 펼침 카드 (12개월분 MonthlySajuCard 연속 렌더링) */}
+          {showAnnualSaju && (
+            <div ref={annualAreaRef} style={{ padding: "0 16px 16px" }}>
+              {annualSajuLoading && (
+                <div style={{ backgroundColor: "#fff", borderRadius: "20px", padding: "22px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.07)", marginBottom: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #F2F4F6" }}>
+                    <div>
+                      <span style={{ fontSize: "11px", fontWeight: 700, color: "#FF6B35", backgroundColor: "#FFF3ED", padding: "3px 8px", borderRadius: "6px" }}>9990 연간 운세</span>
+                      <h2 style={{ fontSize: "19px", fontWeight: 700, color: "#1B1D1F", margin: "6px 0 0" }}>연간 운세풀이 생성 중...</h2>
+                    </div>
+                    <button type="button" style={{ background: "none", border: "none", fontSize: "18px", color: "#AEB5BC", cursor: "pointer", padding: "4px" }} onClick={() => setShowAnnualSaju(false)} aria-label="연간 운세 닫기">✕</button>
+                  </div>
+                  <div style={{ padding: "30px 20px", textAlign: "center" }}>
+                    <div style={{ width: "32px", height: "32px", border: "3px solid #FFF3ED", borderTopColor: "#FF6B35", borderRadius: "50%", margin: "0 auto 12px", animation: "spin 1s linear infinite" }} />
+                    <p style={{ fontSize: "13px", color: "#6B7684", margin: 0 }}>12개월분 운세를 생성하고 있어요...<br />잠시만 기다려 주세요</p>
+                  </div>
+                </div>
+              )}
+              {annualSajuError && (
+                <div style={{ backgroundColor: "#fff", borderRadius: "20px", padding: "22px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.07)", marginBottom: "12px", textAlign: "center" }}>
+                  <p style={{ fontSize: "13px", color: "#F04452", margin: 0 }}>{annualSajuError}</p>
+                </div>
+              )}
+              {annualSajuReports.length > 0 && !annualSajuLoading && (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                    <div>
+                      <span style={{ fontSize: "11px", fontWeight: 700, color: "#FF6B35", backgroundColor: "#FFF3ED", padding: "3px 8px", borderRadius: "6px" }}>9990 연간 운세</span>
+                      <h2 style={{ fontSize: "19px", fontWeight: 700, color: "#1B1D1F", margin: "6px 0 0" }}>
+                        {annualSajuReports[0].year}년 {annualSajuReports[0].month}월 ~ {annualSajuReports[annualSajuReports.length - 1].year}년 {annualSajuReports[annualSajuReports.length - 1].month}월
+                      </h2>
+                    </div>
+                    <button type="button" style={{ background: "none", border: "none", fontSize: "18px", color: "#AEB5BC", cursor: "pointer", padding: "4px" }} onClick={() => setShowAnnualSaju(false)} aria-label="연간 운세 닫기">✕</button>
+                  </div>
+                  {annualSajuReports.map((report, idx) => (
+                    <div key={`annual-${report.year}-${report.month}`} style={{ marginBottom: idx < annualSajuReports.length - 1 ? "12px" : "0" }}>
+                      <MonthlySajuCard
+                        report={report}
+                        isLoading={false}
+                        error={null}
+                        targetYear={report.year}
+                        targetMonth={report.month}
+                        onClose={() => setShowAnnualSaju(false)}
+                      />
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           )}
 
