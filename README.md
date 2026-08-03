@@ -1,35 +1,62 @@
-# Fortune Calendar
+# 🔮 Fortune Calendar (앱인토스)
 
 > A daily-driver calendar for Koreans who check their fortune every morning.
-> Classical East Asian calendrical computation × OpenAI LLM × edge-native serverless.
+> **Classical East Asian calendrical computation × OpenAI LLM × Edge-native serverless.**
 
 **Live in production** on [Toss](https://toss.im/) — Korea's largest fintech super-app (30M+ users) — as a mini-app.
 
+[![Codex for OSS](https://img.shields.io/badge/OpenAI-Codex_for_OSS-412991.svg)](https://openai.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 ---
 
-## Why this exists
+## 🌟 Open Source Highlight: Korean Manseryeok Engine
 
-Google Calendar and Apple Calendar are opened daily by almost everyone.
-Checking daily fortune (오늘의 운세) is a deeply ingrained morning ritual in Korea.
+While Fortune Calendar is a consumer-facing app, its core is powered by a **Zero-dependency Korean Manseryeok (萬歲曆) / Four Pillars of Destiny (四柱八字) calculation engine** written purely in TypeScript. 
 
-Fortune Calendar layers personalized fortune readings — computed from classical Manseryeok (만세력), lunar calendar, and Four Pillars of Destiny (사주) — onto a real schedule calendar. For the fortune-interested slice of Koreans, this becomes a genuine daily-driver alternative to generic calendars.
+Other developers building fortune, astrology, or traditional calendar apps can freely use our engine located at [`src/lib/manseryeok.ts`](./src/lib/manseryeok.ts).
 
-## Traction (as of 2026-07-23)
+### Why use our engine?
+- **No external APIs**: 100% local, deterministic calculations.
+- **Accurate Solar Terms**: Uses a simplified VSOP87 algorithm to calculate precise solar term boundaries (입춘, 경칩, etc.) for month pillar transitions.
+- **Full Analysis**: Calculates stems (천간), branches (지지), Five Elements (오행) balance, and dominant/weak elements.
 
-| Metric | Value |
-| --- | --- |
-| DAU growth (last 30 days) | ~10 → ~140 (~12x) |
-| Cumulative users | 1,329 |
-| Deep engagement | 121 of ~140 DAU stay 5+ minutes (~86%) |
-| Audience | 65.6% female, concentrated in 40–50s |
-| Platform split | 75% Android / 25% iOS |
-| Distribution | Toss mini-app only (no app store listing) |
+### Quick Start (Engine)
 
-*Source: Toss Partner Console analytics.*
+You can extract and use the engine in your own projects:
 
-## Architecture
+```ts
+import { calculateSaju } from './src/lib/manseryeok';
 
+// calculateSaju(birthDate: string, birthTime: string)
+const saju = calculateSaju('1990-05-15', '오시');
+
+console.log(saju.yearPillar.hanja);  // "庚午" (Year Pillar)
+console.log(saju.monthPillar.hanja); // "辛巳" (Month Pillar)
+console.log(saju.dayPillar.hanja);   // "庚午" (Day Pillar)
+console.log(saju.hourPillar.hanja);  // "壬午" (Hour Pillar)
+
+console.log(saju.dominantElement);   // "화" (Fire)
+console.log(saju.weakElement);       // "목" (Wood)
 ```
+
+We are actively working on extracting this into a standalone `korean-manseryeok` npm package!
+
+---
+
+## 🤖 AI-Powered OSS Workflows
+
+This project actively utilizes **AI Agents (LLMs)** not just in the product, but in the open-source maintenance lifecycle. We have integrated automated GitHub Actions workflows (see `.github/workflows`):
+
+- **Codex PR Reviewer**: Automatically reviews incoming PRs, catches bugs, and suggests architectural improvements.
+- **AI Issue Triage**: Automatically labels, categorizes, and assigns priority to new issues based on user bug reports.
+- **Auto Release Notes**: Generates semantic release notes directly from commit histories using LLMs.
+
+---
+
+## 🏗 Architecture
+
+```text
 [Toss Mini-app WebView]
         │
         ▼
@@ -42,29 +69,41 @@ Fortune Calendar layers personalized fortune readings — computed from classica
 
 ### Key design decisions
 
-- **Deterministic pre-computation + LLM reasoning.** Sexagenary cycle, Five Elements balance, and monthly solar terms are computed by a pure TypeScript engine. Only the structured result is sent to the LLM, keeping outputs consistent and token cost low.
-- **Edge-native.** Cloudflare Workers gives zero-cold-start latency and absorbs Korean morning traffic spikes (7–9am, when users check fortune right after waking).
-- **Strict JSON mode.** All OpenAI calls use `response_format: { type: "json_object" }` for typed client rendering.
+- **Deterministic pre-computation + LLM reasoning:** Sexagenary cycle, Five Elements balance, and monthly solar terms are computed by the pure TypeScript engine. Only the structured result is sent to the LLM, keeping outputs consistent, minimizing hallucinations, and keeping token costs low.
+- **Edge-native:** Cloudflare Workers provides zero-cold-start latency, effortlessly absorbing Korean morning traffic spikes (7–9 AM, when users check their fortune right after waking up).
+- **Strict JSON mode:** All OpenAI calls use `response_format: { type: "json_object" }` for typed, predictable client rendering.
 
-## Tech stack
+---
 
-- TypeScript
-- Cloudflare Workers (edge runtime)
-- OpenAI API (`gpt-4o-mini`)
-- Toss Apps SDK (`@apps-in-toss/web-framework`)
+## 📈 Traction (as of 2026-07-23)
 
-## Roadmap
+| Metric | Value |
+| --- | --- |
+| DAU growth (last 30 days) | ~10 → ~140 (~12x) |
+| Cumulative users | 1,329 |
+| Deep engagement | 121 of ~140 DAU stay 5+ minutes (~86%) |
+| Audience | 65.6% female, concentrated in 40–50s |
+| Platform split | 75% Android / 25% iOS |
 
-- [ ] Extract Manseryeok / Four Pillars engine as a standalone TypeScript package
-- [ ] Upgrade daily interpretation pipeline to `gpt-4o` for deeper reasoning
-- [ ] Semantic search over classical Manseryeok texts (embeddings + reranker)
-- [ ] Public architecture write-up on edge + JSON-mode patterns
-- [ ] Codex-powered PR review and issue triage via GitHub Actions
+*Source: Toss Partner Console analytics.*
 
-## About the maintainer
+---
 
-Solo maintainer, non-CS background. Building and supporting Fortune Calendar end-to-end on the Toss platform.
+## 🗺 Roadmap
 
-## License
+- [x] Integrate AI-driven PR review, issue triage, and release notes.
+- [ ] Extract Manseryeok / Four Pillars engine as a standalone npm package.
+- [ ] Upgrade daily interpretation pipeline to `gpt-4o` for deeper reasoning.
+- [ ] Public architecture write-up on edge + JSON-mode patterns.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Whether it's adding a new feature, fixing a bug, or improving the documentation, please check out our [Contributing Guidelines](CONTRIBUTING.md).
+
+All PRs will be automatically reviewed by our AI Agent for faster iteration.
+
+## 📄 License
 
 MIT
