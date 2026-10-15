@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef } from "react";
 import type { CSSProperties } from "react";
 import type { CalendarDayData, CalendarEvent } from "../types/fortune";
 import { tomorrow as tomorrowFn } from "../lib/dateUtils";
+import { ANNUAL_SAJU_PRODUCT } from "../lib/products";
 
 interface CalendarProps {
   monthLabel: string;
@@ -303,7 +304,7 @@ export function Calendar({
         return (
           <div ref={selectedPanelRef} style={styles.selectedPanel}>
             <div style={styles.selectedPanelHeader}>
-              <div>
+              <div style={{ flexShrink: 0 }}>
                 <p style={styles.selectedTitle}>
                   {Number(selectedDate.split("-")[1])}월 {Number(selectedDate.split("-")[2])}일
                   {day.holidayName ? ` · 🎌 ${day.holidayName}` : ""}
@@ -312,7 +313,7 @@ export function Calendar({
               </div>
               <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" }}>
                 <button type="button" style={styles.annualSajuBtn} onClick={() => onRequestAnnualSaju(selectedDate)}>
-                  9990 연간 운세
+                  {ANNUAL_SAJU_PRODUCT.displayAmount} {ANNUAL_SAJU_PRODUCT.displayName}
                 </button>
                 <button type="button" style={styles.monthlySajuBtn} onClick={() => onRequestMonthlySaju(selectedDate)}>
                   990 월간 운세

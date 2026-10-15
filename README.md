@@ -107,3 +107,23 @@ All PRs will be automatically reviewed by our AI Agent for faster iteration.
 ## 📄 License
 
 MIT
+
+## 로컬 개발 및 배포
+
+SDK 3.8.0과 AIT Devtools를 사용하며 Node.js 24 이상이 필요합니다 (`.nvmrc` 참고).
+
+```sh
+nvm use
+npm ci
+npm run dev
+```
+
+`http://localhost:5173`에서 Devtools로 테스트합니다. SDK 설정은 `apps-in-toss.config.ts`에 있습니다.
+
+```sh
+npx tsc -b
+npm run build
+npm run deploy -- --location ./fortunecalendar.ait
+```
+
+`.ait`는 Git에 포함하지 않습니다. 콘솔에 업로드한 뒤 QR로 실제 광고 및 결제를 확인하고 출시합니다.

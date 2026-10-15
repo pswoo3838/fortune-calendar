@@ -191,6 +191,9 @@ export function MonthlySajuCard({
             <div style={styles.bestDaysBox}>
               <span style={styles.bestDaysLabel}>🔴 이달의 최고 대길일 (Best Days)</span>
               <div style={styles.bestDaysPills}>
+                {report.monthlyPrescription.bestDays.length === 0 && (
+                  <span>행운의 날을 아직 확인하지 못했어요.</span>
+                )}
                 {report.monthlyPrescription.bestDays.map((d) => {
                   const [, m, day] = d.split("-");
                   return (

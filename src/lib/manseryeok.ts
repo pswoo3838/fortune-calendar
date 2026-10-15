@@ -17,8 +17,6 @@ const BRANCHES_HJ = ["子","丑","寅","卯","辰","巳","午","未","申","酉"
 const STEM_ELEMENT = ["목","목","화","화","토","토","금","금","수","수"] as const;
 const BRANCH_ELEMENT = ["수","토","목","목","토","화","화","토","금","금","토","수"] as const;
 
-const FIVE_ELEMENTS = ["목","화","토","금","수"] as const;
-
 const BIRTH_TIME_BRANCH: Record<string, number> = {
   "자시": 0,  "축시": 1,  "인시": 2,  "묘시": 3,
   "진시": 4,  "사시": 5,  "오시": 6,  "미시": 7,

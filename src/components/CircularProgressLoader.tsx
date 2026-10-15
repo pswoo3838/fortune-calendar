@@ -3,12 +3,14 @@ import type { CSSProperties } from "react";
 
 interface CircularProgressLoaderProps {
   isLoading: boolean;
+  progress?: number;
   message?: string;
   onComplete?: () => void;
 }
 
 export function CircularProgressLoader({
   isLoading,
+  progress: controlledProgress,
   message,
   onComplete,
 }: CircularProgressLoaderProps) {
@@ -23,6 +25,8 @@ export function CircularProgressLoader({
       }, 300);
       return () => clearTimeout(timer);
     }
+
+    if (controlledProgress !== undefined) return;
 
     // 로딩 중일 때 0%에서 98%까지 부드럽게 상승
     setProgress(0);
@@ -39,7 +43,7 @@ export function CircularProgressLoader({
     }, 120);
 
     return () => clearInterval(interval);
-  }, [isLoading, onComplete]);
+  }, [isLoading, onComplete, controlledProgress]);
 
   // 진행률에 따른 다이내믹 메시지
   const getDynamicStatusText = (p: number) => {
@@ -51,7 +55,9 @@ export function CircularProgressLoader({
     return "월간 운세 리포트 작성이 완료되었습니다!";
   };
 
-  const displayPercent = Math.min(100, Math.floor(progress));
+  const displayPercent = Math.min(100, Math.max(0, Math.floor(
+    isLoading ? controlledProgress ?? progress : 100,
+  )));
   const radius = 46;
   const strokeWidth = 8;
   const circumference = 2 * Math.PI * radius; // 약 289.02
@@ -59,7 +65,15 @@ export function CircularProgressLoader({
 
   return (
     <div style={styles.container}>
-      <div style={styles.ringWrapper}>
+      <div
+        style={styles.ringWrapper}
+        role="progressbar"
+        aria-label="운세 생성 진행률"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={displayPercent}
+        aria-valuetext={message ?? `${displayPercent}%`}
+      >
         <svg width="120" height="120" viewBox="0 0 120 120" style={styles.svg}>
           <defs>
             <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -152,5 +166,6 @@ const styles: Record<string, CSSProperties> = {
     textAlign: "center",
     margin: 0,
     lineHeight: "1.5",
+    whiteSpace: "pre-line",
   },
 };

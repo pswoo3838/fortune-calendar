@@ -16,30 +16,60 @@ interface LuckyDayItem {
   score?: number;
 }
 
+const luckyDaysRequests = new Map<string, Promise<LuckyDayItem[]>>();
+const luckyDaysMemory = new Map<string, LuckyDayItem[]>();
+const monthlyReportRequests = new Map<string, Promise<MonthlySajuReport>>();
+
+function getLuckyDaysCacheKey(profile: UserProfile, year: number, month: number): string {
+  return `fortune_lucky_days_${profile.zodiac}_${year}_${month}`;
+}
+
+function readCachedLuckyDays(cacheKey: string): LuckyDayItem[] | null {
+  const memory = luckyDaysMemory.get(cacheKey);
+  if (memory) return memory;
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const parsed: unknown = JSON.parse(cached);
+      if (Array.isArray(parsed)) return parsed as LuckyDayItem[];
+    }
+  } catch (err) {
+    console.warn("[LuckyDays] 캐시 읽기 에러:", err);
+  }
+  return null;
+}
+
 /**
  * 이번 달 행운의 날(Best Days) 상위 목록을 조회하는 공통 헬퍼 함수
- * '이번 달 행운의 날 카드'와 '990 월간 운세'에서 공통으로 참조하여 100% 데이터 정합성을 보장합니다.
+ * 행운의 날 카드와 월간·연간 리포트가 같은 월별 데이터 및 진행 중 요청을 공유합니다.
  */
 export async function getOrFetchLuckyDays(
   profile: UserProfile,
   year: number,
   month: number
 ): Promise<LuckyDayItem[]> {
-  const cacheKey = `fortune_lucky_days_${profile.zodiac}_${year}_${month}`;
-  const cached = localStorage.getItem(cacheKey);
+  const cacheKey = getLuckyDaysCacheKey(profile, year, month);
+  const cached = readCachedLuckyDays(cacheKey);
+  if (cached) return cached;
 
-  if (cached) {
-    try {
-      const parsed = JSON.parse(cached) as LuckyDayItem[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    } catch (e) {
-      console.warn("[LuckyDays] 캐시 읽기 에러:", e);
-    }
+  let request = luckyDaysRequests.get(cacheKey);
+  if (!request) {
+    request = fetchLuckyDays(profile, year, month, cacheKey);
+    luckyDaysRequests.set(cacheKey, request);
   }
+  try {
+    return await request;
+  } finally {
+    luckyDaysRequests.delete(cacheKey);
+  }
+}
 
-  // 캐시가 없으면 API 호출
+async function fetchLuckyDays(
+  profile: UserProfile,
+  year: number,
+  month: number,
+  cacheKey: string,
+): Promise<LuckyDayItem[]> {
   try {
     const daysInMonth = new Date(year, month, 0).getDate();
     const WORKER_URL =
@@ -70,6 +100,7 @@ export async function getOrFetchLuckyDays(
       })
       .slice(0, 10);
 
+    luckyDaysMemory.set(cacheKey, good);
     try {
       localStorage.setItem(cacheKey, JSON.stringify(good));
     } catch (e) {
@@ -377,15 +408,13 @@ function buildClientFallbackReport(
       luckyNumber: ohengLucky.luckyNumber,
       luckyItem: ohengLucky.luckyItem,
       avoidAction: mData.avoidAction,
-      bestDays: bestDays.length > 0 ? bestDays : [`${year}-${String(month).padStart(2, "0")}-07`, `${year}-${String(month).padStart(2, "0")}-18`],
+      bestDays,
     },
     generatedAt: new Date().toISOString(),
   };
 }
 
 // 오래된 캐시 (동일 문장으로 중복 유도된 데이터 및 결제 실패 잔재)를 한 번에 일괄 무시/청소
-const CACHE_VERSION = "v4";
-
 if (typeof window !== "undefined" && window.localStorage) {
   try {
     const keysToRemove: string[] = [];
@@ -416,20 +445,52 @@ export async function getMonthlySajuReport(
   shouldSaveCache: boolean = true
 ): Promise<MonthlySajuReport> {
   const cacheKey = `fortune_monthly_saju_v4_${profile.name}_${profile.zodiac}_${year}_${month}`;
-  const cached = localStorage.getItem(cacheKey);
-
+  const luckyDays = await getOrFetchLuckyDays(profile, year, month);
+  const bestDays = luckyDays.slice(0, 3).map((day) => day.date);
+  const cached = getCachedMonthlySajuReportSync(profile, year, month);
   if (cached) {
-    try {
-      return JSON.parse(cached) as MonthlySajuReport;
-    } catch (e) {
-      console.warn("[MonthlySaju] 캐시 파싱 실패:", e);
-    }
+    const report = withBestDays(cached, bestDays);
+    saveMonthlySajuReport(report);
+    return report;
   }
 
-  // 1) 행운의 날 공통 데이터 조회 (Best Days 정합성 보장)
-  const luckyDays = await getOrFetchLuckyDays(profile, year, month);
-  const bestDays = luckyDays.slice(0, 3).map((d) => d.date);
+  let request = monthlyReportRequests.get(cacheKey);
+  if (!request) {
+    request = buildMonthlySajuReport(profile, year, month, bestDays);
+    monthlyReportRequests.set(cacheKey, request);
+  }
+  try {
+    const report = await request;
+    if (shouldSaveCache) saveMonthlySajuReport(report);
+    return report;
+  } finally {
+    monthlyReportRequests.delete(cacheKey);
+  }
+}
 
+function withBestDays(report: MonthlySajuReport, bestDays: string[]): MonthlySajuReport {
+  return {
+    ...report,
+    monthlyPrescription: { ...report.monthlyPrescription, bestDays },
+  };
+}
+
+export function saveMonthlySajuReport(report: MonthlySajuReport): void {
+  const { userProfile, year, month } = report;
+  const cacheKey = `fortune_monthly_saju_v4_${userProfile.name}_${userProfile.zodiac}_${year}_${month}`;
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify(report));
+  } catch (err) {
+    console.warn("[MonthlySaju] 캐시 저장 실패:", err);
+  }
+}
+
+async function buildMonthlySajuReport(
+  profile: UserProfile,
+  year: number,
+  month: number,
+  bestDays: string[],
+): Promise<MonthlySajuReport> {
   const saju = calculateSaju(profile.birthDate, profile.birthTime || "모름");
   const ohengLucky = getOhengLucky(saju.weakElement, year, month);
 
@@ -476,31 +537,16 @@ export async function getMonthlySajuReport(
         luckyNumber: aiResult.monthlyPrescription?.luckyNumber ?? ohengLucky.luckyNumber,
         luckyItem: aiResult.monthlyPrescription?.luckyItem || ohengLucky.luckyItem,
         avoidAction: aiResult.monthlyPrescription?.avoidAction || "성급한 결정이나 감정적인 대립은 피하는 것이 좋습니다.",
-        bestDays: bestDays.length > 0 ? bestDays : [`${year}-${String(month).padStart(2, "0")}-07`, `${year}-${String(month).padStart(2, "0")}-18`],
+        bestDays,
       },
       generatedAt: new Date().toISOString(),
     };
 
-    if (shouldSaveCache) {
-      try {
-        localStorage.setItem(cacheKey, JSON.stringify(report));
-      } catch (e) {
-        console.warn("[MonthlySaju] 캐시 저장 실패:", e);
-      }
-    }
     return report;
   }
 
   // API 실패 시 고품질 동적 로컬 폴백 생성
-  const fallbackReport = buildClientFallbackReport(profile, year, month, bestDays);
-  if (shouldSaveCache) {
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify(fallbackReport));
-    } catch (e) {
-      console.warn("[MonthlySaju] 폴백 캐시 저장 실패:", e);
-    }
-  }
-  return fallbackReport;
+  return buildClientFallbackReport(profile, year, month, bestDays);
 }
 
 /**
@@ -555,7 +601,9 @@ export function getCachedMonthlySajuReportSync(
   const cached = localStorage.getItem(cacheKey);
   if (!cached) return null;
   try {
-    return JSON.parse(cached) as MonthlySajuReport;
+    const report = JSON.parse(cached) as MonthlySajuReport;
+    const luckyDays = readCachedLuckyDays(getLuckyDaysCacheKey(profile, year, month));
+    return luckyDays ? withBestDays(report, luckyDays.slice(0, 3).map((day) => day.date)) : report;
   } catch (e) {
     return null;
   }

@@ -48,7 +48,7 @@ async function getFramework(): Promise<FrameworkModule | null> {
 // ──────────────────────────────────────────────
 // 안전한 SDK 지원 판단 헬퍼 (Toss Web Bridge 오류 방어)
 // ──────────────────────────────────────────────
-function safeIsAdSupported(fw: any): boolean {
+function safeIsAdSupported(fw: FrameworkModule | null): fw is FrameworkModule {
   try {
     if (typeof fw?.showFullScreenAd?.isSupported === "function") {
       return !!fw.showFullScreenAd.isSupported();
@@ -59,7 +59,7 @@ function safeIsAdSupported(fw: any): boolean {
   return false;
 }
 
-function safeIsLoadAdSupported(fw: any): boolean {
+function safeIsLoadAdSupported(fw: FrameworkModule | null): fw is FrameworkModule {
   try {
     if (typeof fw?.loadFullScreenAd?.isSupported === "function") {
       return !!fw.loadFullScreenAd.isSupported();
@@ -75,6 +75,8 @@ function safeIsLoadAdSupported(fw: any): boolean {
 // ──────────────────────────────────────────────
 let _adLoaded = false;
 let _loadUnregister: (() => void) | null = null;
+let _loadGeneration = 0;
+let _cancelShow: (() => void) | null = null;
 
 /**
  * 전면 광고를 미리 로드합니다.
@@ -82,7 +84,9 @@ let _loadUnregister: (() => void) | null = null;
  * - load → show → load → show 순서를 준수
  */
 export async function preloadFullScreenAd(): Promise<void> {
+  const generation = ++_loadGeneration;
   const fw = await getFramework();
+  if (generation !== _loadGeneration) return;
   if (!safeIsLoadAdSupported(fw)) {
     console.log("[Ad] 전면 광고 미지원 환경");
     return;
@@ -90,16 +94,19 @@ export async function preloadFullScreenAd(): Promise<void> {
 
   // 이전 리스너 해제
   _loadUnregister?.();
+  _adLoaded = false;
 
   _loadUnregister = fw.loadFullScreenAd({
     options: { adGroupId: AD_GROUP.INTERSTITIAL },
     onEvent: (event) => {
+      if (generation !== _loadGeneration) return;
       if (event.type === "loaded") {
         _adLoaded = true;
         console.log("[Ad] 전면 광고 로드 완료");
       }
     },
     onError: (err) => {
+      if (generation !== _loadGeneration) return;
       console.warn("[Ad] 전면 광고 로드 실패:", err);
       _adLoaded = false;
     },
@@ -115,21 +122,25 @@ const AD_SHOW_TIMEOUT_MS = 15_000;
  * - dismissed 후 자동으로 다음 광고를 preload
  */
 export async function showFullScreenAd(): Promise<boolean> {
-  if (!_adLoaded) {
+  if (!_adLoaded || _cancelShow) {
     console.log("[Ad] 전면 광고 미로드 상태, 스킵");
     return false;
   }
 
   const fw = await getFramework();
-  if (!safeIsAdSupported(fw)) return false;
+  if (!safeIsAdSupported(fw) || !_adLoaded || _cancelShow) return false;
+  _adLoaded = false;
 
   return new Promise<boolean>((resolve) => {
     let settled = false;
+    let unregister: (() => void) | null = null;
 
     const settle = (value: boolean) => {
       if (!settled) {
         settled = true;
         clearTimeout(timer);
+        unregister?.();
+        _cancelShow = null;
         resolve(value);
       }
     };
@@ -140,32 +151,42 @@ export async function showFullScreenAd(): Promise<boolean> {
       settle(false);
     }, AD_SHOW_TIMEOUT_MS);
 
-    fw.showFullScreenAd({
-      options: { adGroupId: AD_GROUP.INTERSTITIAL },
-      onEvent: (event) => {
-        switch (event.type) {
-          case "dismissed":
-            _adLoaded = false;
-            void preloadFullScreenAd();
-            settle(true);
-            break;
-          case "failedToShow":
-            _adLoaded = false;
-            void preloadFullScreenAd();
-            settle(false);
-            break;
-          // impression, clicked 등은 로깅만
-          default:
-            console.log("[Ad] 전면 광고 이벤트:", event.type);
-        }
-      },
-      onError: (err) => {
-        console.warn("[Ad] 전면 광고 표시 실패:", err);
-        _adLoaded = false;
-        void preloadFullScreenAd();
-        settle(false);
-      },
-    });
+    _cancelShow = () => settle(false);
+
+    try {
+      unregister = fw.showFullScreenAd({
+        options: { adGroupId: AD_GROUP.INTERSTITIAL },
+        onEvent: (event) => {
+          if (settled) return;
+          switch (event.type) {
+            case "dismissed":
+              _adLoaded = false;
+              void preloadFullScreenAd();
+              settle(true);
+              break;
+            case "failedToShow":
+              _adLoaded = false;
+              void preloadFullScreenAd();
+              settle(false);
+              break;
+            // impression, clicked 등은 로깅만
+            default:
+              console.log("[Ad] 전면 광고 이벤트:", event.type);
+          }
+        },
+        onError: (err) => {
+          if (settled) return;
+          console.warn("[Ad] 전면 광고 표시 실패:", err);
+          _adLoaded = false;
+          void preloadFullScreenAd();
+          settle(false);
+        },
+      });
+      if (settled) unregister();
+    } catch (err) {
+      console.warn("[Ad] 전면 광고 호출 실패:", err);
+      settle(false);
+    }
   });
 }
 
@@ -211,6 +232,9 @@ export async function showLuckyDaysAd(): Promise<boolean> {
  * 전면 광고 로드 리스너를 해제합니다 (컴포넌트 언마운트 시)
  */
 export function cleanupFullScreenAd(): void {
+  _loadGeneration++;
+  _adLoaded = false;
+  _cancelShow?.();
   _loadUnregister?.();
   _loadUnregister = null;
 }
@@ -219,12 +243,25 @@ export function cleanupFullScreenAd(): void {
 // 배너 광고 (TossAds)
 // ──────────────────────────────────────────────
 let _bannerInitialized = false;
+let _bannerInitialization: Promise<void> | null = null;
 
 /**
  * TossAds SDK를 초기화합니다.
  * - 앱 시작 시 1회 호출
  */
 export async function initializeTossAds(): Promise<void> {
+  if (_bannerInitialized) return;
+  if (!_bannerInitialization) {
+    _bannerInitialization = initializeBannerSdk();
+  }
+  try {
+    await _bannerInitialization;
+  } finally {
+    _bannerInitialization = null;
+  }
+}
+
+async function initializeBannerSdk(): Promise<void> {
   const fw = await getFramework();
   try {
     if (!fw?.TossAds?.initialize?.isSupported?.()) {
@@ -236,16 +273,30 @@ export async function initializeTossAds(): Promise<void> {
     return;
   }
 
-  fw.TossAds.initialize({
-    callbacks: {
-      onInitialized: () => {
-        _bannerInitialized = true;
-        console.log("[Ad] TossAds 초기화 완료");
-      },
-      onInitializationFailed: (err: Error) => {
-        console.warn("[Ad] TossAds 초기화 실패:", err);
-      },
-    },
+  await new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, 10_000);
+    const finish = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    try {
+      fw.TossAds.initialize({
+        callbacks: {
+          onInitialized: () => {
+            _bannerInitialized = true;
+            console.log("[Ad] TossAds 초기화 완료");
+            finish();
+          },
+          onInitializationFailed: (err: Error) => {
+            console.warn("[Ad] TossAds 초기화 실패:", err);
+            finish();
+          },
+        },
+      });
+    } catch (err) {
+      console.warn("[Ad] 배너 광고 초기화 호출 실패:", err);
+      finish();
+    }
   });
 }
 
@@ -256,6 +307,7 @@ export async function initializeTossAds(): Promise<void> {
 export async function attachBannerAd(
   targetElement: HTMLElement,
 ): Promise<(() => void) | null> {
+  await initializeTossAds();
   if (!_bannerInitialized) {
     console.log("[Ad] TossAds 미초기화, 배너 부착 스킵");
     return null;

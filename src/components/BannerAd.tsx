@@ -6,11 +6,16 @@ export function BannerAd() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     let destroy: (() => void) | null = null;
 
     const attach = async () => {
       if (containerRef.current) {
         const cleanup = await attachBannerAd(containerRef.current);
+        if (cancelled) {
+          cleanup?.();
+          return;
+        }
         if (cleanup) {
           destroy = cleanup;
           setIsLoaded(true);
@@ -21,6 +26,7 @@ export function BannerAd() {
     void attach();
 
     return () => {
+      cancelled = true;
       destroy?.();
     };
   }, []);

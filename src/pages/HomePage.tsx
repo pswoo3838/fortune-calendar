@@ -16,6 +16,7 @@ import { FortuneCard } from "../components/FortuneCard";
 import { LuckyDaysCard } from "../components/LuckyDaysCard";
 import { BannerAd } from "../components/BannerAd";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { CircularProgressLoader } from "../components/CircularProgressLoader";
 import { BottomNav } from "../components/BottomNav";
 
 import { getZodiacEmoji } from "../lib/zodiac";
@@ -26,6 +27,7 @@ import type { NewEventInput } from "../hooks/useCalendarEvents";
 import { MonthlySajuCard } from "../components/MonthlySajuCard";
 import type { MonthlySajuReport } from "../types/fortune";
 import { getMonthlySajuReport, getCachedMonthlySajuReportSync } from "../lib/fortuneService";
+import { ANNUAL_SAJU_PRODUCT } from "../lib/products";
 
 export function HomePage() {
   const { profile, isLoading: profileLoading, register, reset } = useUserProfile();
@@ -75,9 +77,11 @@ export function HomePage() {
   const [monthlySajuTargetYear, setMonthlySajuTargetYear] = useState<number>(new Date().getFullYear());
   const [monthlySajuTargetMonth, setMonthlySajuTargetMonth] = useState<number>(new Date().getMonth() + 1);
 
-  // ── 9990 연간 운세 카드 상태 ──
+  // ── 9,900원 연간 운세 카드 상태 ──
   const [annualSajuReports, setAnnualSajuReports] = useState<MonthlySajuReport[]>([]);
   const [annualSajuLoading, setAnnualSajuLoading] = useState(false);
+  const [annualSajuCompletedMonths, setAnnualSajuCompletedMonths] = useState(0);
+  const [annualSajuStartMonth, setAnnualSajuStartMonth] = useState(new Date().getMonth() + 1);
   const [annualSajuError, setAnnualSajuError] = useState<string | null>(null);
   const [showAnnualSaju, setShowAnnualSaju] = useState(false);
   const [shouldScrollToAnnual, setShouldScrollToAnnual] = useState(false);
@@ -98,7 +102,7 @@ export function HomePage() {
     // 1. 이미 결제되어 로컬 캐시에 완벽히 존재할 때만 즉시 카드를 펼침
     const cached = getCachedMonthlySajuReportSync(profile, targetYear, targetMonth);
     if (cached) {
-      setMonthlySajuReport(cached);
+      setMonthlySajuReport(await getMonthlySajuReport(profile, targetYear, targetMonth));
       setMonthlySajuLoading(false);
       setShowMonthlySaju(true);
       setShouldScrollToSaju(true);
@@ -145,6 +149,8 @@ export function HomePage() {
     setActiveDate(null);
     setShowMonthlySaju(false);
     setAnnualSajuError(null);
+    setAnnualSajuCompletedMonths(0);
+    setAnnualSajuStartMonth(startMonth);
 
     // 캐시 확인: 12개월 전부 캐시에 있는지 체크
     const cachedReports: MonthlySajuReport[] = [];
@@ -162,7 +168,10 @@ export function HomePage() {
     }
 
     if (cachedReports.length === 12) {
-      setAnnualSajuReports(cachedReports);
+      const reports = await Promise.all(cachedReports.map((report) =>
+        getMonthlySajuReport(profile, report.year, report.month),
+      ));
+      setAnnualSajuReports(reports);
       setAnnualSajuLoading(false);
       setShowAnnualSaju(true);
       setShouldScrollToAnnual(true);
@@ -177,7 +186,10 @@ export function HomePage() {
 
     try {
       const { requestAnnualSajuWithPayment } = await import("../lib/paymentManager");
-      const result = await requestAnnualSajuWithPayment(profile, startYear, startMonth);
+      const result = await requestAnnualSajuWithPayment(
+        profile, startYear, startMonth,
+        (completedMonths) => setAnnualSajuCompletedMonths(completedMonths),
+      );
 
       if (result.success && result.reports) {
         setAnnualSajuReports(result.reports);
@@ -444,22 +456,25 @@ export function HomePage() {
             </div>
           )}
 
-          {/* 9990 연간 운세 하단 펼침 카드 (12개월분 MonthlySajuCard 연속 렌더링) */}
+          {/* 9,900원 연간 운세 하단 펼침 카드 (12개월분 MonthlySajuCard 연속 렌더링) */}
           {showAnnualSaju && (
             <div ref={annualAreaRef} style={{ padding: "0 16px 16px" }}>
               {annualSajuLoading && (
                 <div style={{ backgroundColor: "#fff", borderRadius: "20px", padding: "22px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.07)", marginBottom: "12px" }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #F2F4F6" }}>
                     <div>
-                      <span style={{ fontSize: "11px", fontWeight: 700, color: "#FF6B35", backgroundColor: "#FFF3ED", padding: "3px 8px", borderRadius: "6px" }}>9990 연간 운세</span>
+                      <span style={{ fontSize: "11px", fontWeight: 700, color: "#FF6B35", backgroundColor: "#FFF3ED", padding: "3px 8px", borderRadius: "6px" }}>{ANNUAL_SAJU_PRODUCT.displayAmount} {ANNUAL_SAJU_PRODUCT.displayName}</span>
                       <h2 style={{ fontSize: "19px", fontWeight: 700, color: "#1B1D1F", margin: "6px 0 0" }}>연간 운세풀이 생성 중...</h2>
                     </div>
                     <button type="button" style={{ background: "none", border: "none", fontSize: "18px", color: "#AEB5BC", cursor: "pointer", padding: "4px" }} onClick={() => setShowAnnualSaju(false)} aria-label="연간 운세 닫기">✕</button>
                   </div>
-                  <div style={{ padding: "30px 20px", textAlign: "center" }}>
-                    <div style={{ width: "32px", height: "32px", border: "3px solid #FFF3ED", borderTopColor: "#FF6B35", borderRadius: "50%", margin: "0 auto 12px", animation: "spin 1s linear infinite" }} />
-                    <p style={{ fontSize: "13px", color: "#6B7684", margin: 0 }}>12개월분 운세를 생성하고 있어요...<br />잠시만 기다려 주세요</p>
-                  </div>
+                  <CircularProgressLoader
+                    isLoading={annualSajuLoading}
+                    progress={(annualSajuCompletedMonths / 12) * 100}
+                    message={annualSajuCompletedMonths < 12
+                      ? `${((annualSajuStartMonth - 1 + annualSajuCompletedMonths) % 12) + 1}월 운세를 생성하고 있어요\n${annualSajuCompletedMonths} / 12개월 분석 완료`
+                      : "12개월 운세 생성이 완료됐어요"}
+                  />
                 </div>
               )}
               {annualSajuError && (
@@ -471,7 +486,7 @@ export function HomePage() {
                 <>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
                     <div>
-                      <span style={{ fontSize: "11px", fontWeight: 700, color: "#FF6B35", backgroundColor: "#FFF3ED", padding: "3px 8px", borderRadius: "6px" }}>9990 연간 운세</span>
+                      <span style={{ fontSize: "11px", fontWeight: 700, color: "#FF6B35", backgroundColor: "#FFF3ED", padding: "3px 8px", borderRadius: "6px" }}>{ANNUAL_SAJU_PRODUCT.displayAmount} {ANNUAL_SAJU_PRODUCT.displayName}</span>
                       <h2 style={{ fontSize: "19px", fontWeight: 700, color: "#1B1D1F", margin: "6px 0 0" }}>
                         {annualSajuReports[0].year}년 {annualSajuReports[0].month}월 ~ {annualSajuReports[annualSajuReports.length - 1].year}년 {annualSajuReports[annualSajuReports.length - 1].month}월
                       </h2>
@@ -549,7 +564,7 @@ export function HomePage() {
           type="button"
           id="fab-add-event"
           style={styles.fab}
-          onClick={() => openEditModal(undefined, selectedDate)}
+          onClick={() => openEditModal(undefined, selectedDate ?? undefined)}
           aria-label="일정 추가"
         >
           +
